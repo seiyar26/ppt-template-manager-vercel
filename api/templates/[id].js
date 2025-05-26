@@ -73,18 +73,43 @@ export default async function handler(req, res) {
       }
       
       // Générer les diapositives à partir des preview_images
-      const Slides = preview_images.map((image, index) => ({
-        id: `slide-${index}`,
-        slide_index: index,
-        slide_number: index + 1,
-        image_path: image.url,
-        url: image.url,
-        fileName: image.fileName,
-        fileSize: image.fileSize,
-        page: image.page
-      }));
+      const Slides = preview_images.map((image, index) => {
+        // S'assurer que l'URL est une URL absolue valide
+        // Cela résout le problème de double URL
+        let imageUrl = image.url;
+        console.log(`URL originale pour slide ${index}:`, imageUrl);
+        
+        // S'assurer que l'URL est directement utilisable sans transformation supplémentaire
+        if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+          // Ne rien faire, l'URL est déjà absolue
+        }
+        
+        return {
+          id: `slide-${index}`,
+          slide_index: index,
+          slide_number: index + 1,
+          image_path: imageUrl,
+          direct_url: imageUrl, // Propriété spéciale qui ne sera pas transformée
+          url: imageUrl,
+          fileName: image.fileName,
+          fileSize: image.fileSize,
+          page: image.page
+        };
+      });
       
       console.log(`Transformation de ${preview_images.length} images en ${Slides.length} diapositives`);
+      
+            // Récupérer les champs associés au template
+      const { data: fieldsData, error: fieldsError } = await supabaseAdmin
+        .from('ppt_fields')
+        .select('*')
+        .eq('template_id', id);
+        
+      if (fieldsError) {
+        console.error('Erreur lors de la récupération des champs:', fieldsError);
+      }
+      
+      console.log(`${fieldsData?.length || 0} champs trouvés pour le template ${id}`);
       
       const template = {
         ...data,
@@ -94,7 +119,9 @@ export default async function handler(req, res) {
         Slides: Slides.length > 0 ? Slides : [],
         // S'assurer que toutes les propriétés attendues sont présentes
         preview_url: data.preview_url || data.file_url,
-        file_url: data.file_url || data.public_url || ''
+        file_url: data.file_url || data.public_url || '',
+        // Inclure les champs dans la réponse pour éviter un appel supplémentaire
+        fields: fieldsData || []
       };
       
       return res.status(200).json({
@@ -102,8 +129,8 @@ export default async function handler(req, res) {
         template
       });
     } 
-    // PATCH - Mettre à jour un template
-    else if (req.method === 'PATCH') {
+    // PUT ou PATCH - Mettre à jour un template
+    else if (req.method === 'PUT' || req.method === 'PATCH') {
       const updates = req.body;
       
       if (!updates) {

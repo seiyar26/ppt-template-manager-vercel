@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiClient, IMAGE_BASE_URL } from '../services/api';
+import { apiClient, IMAGE_BASE_URL, getImageUrl } from '../services/api';
 
 const TemplateFill = () => {
   const { id } = useParams();
@@ -339,11 +339,11 @@ const TemplateFill = () => {
               {/* Vérification défensive pour l'accès à image_path */}
               {currentSlide && currentSlide.image_path ? (
                 <img
-                  src={`${IMAGE_BASE_URL}${currentSlide.image_path}`}
+                  src={currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path))}
                   alt={`Slide ${currentSlideIndex + 1}`}
                   className="w-full h-auto"
                   onError={(e) => {
-                    console.error(`Erreur de chargement de l'image: ${IMAGE_BASE_URL}${currentSlide.image_path}`);
+                    console.error(`Erreur de chargement de l'image: ${currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path))}`);
                     e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPkltYWdlIG5vbiBkaXNwb25pYmxlPC90ZXh0Pjwvc3ZnPg==';
                   }}
                 />

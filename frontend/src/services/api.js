@@ -570,9 +570,18 @@ const getImageUrl = (imagePath) => {
   console.log('Construction URL d\'image à partir de:', imagePath);
   
   // Si l'URL est déjà absolue (commence par http:// ou https://), la retourner telle quelle
+  // mais en s'assurant qu'elle est correctement formatée avec new URL()
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    console.log('URL déjà absolue, retour sans modification');
-    return imagePath;
+    try {
+      // Utiliser l'API URL pour normaliser l'URL et éviter les problèmes de double URL
+      const normalizedUrl = new URL(imagePath).toString();
+      console.log('URL absolue normalisée:', normalizedUrl);
+      return normalizedUrl;
+    } catch (error) {
+      console.error('Erreur lors de la normalisation de l\'URL:', error);
+      // Fallback au cas où l'URL serait invalide
+      return imagePath;
+    }
   }
   
   // Si le chemin est un chemin absolu complet (à partir de /Users/...)
@@ -588,11 +597,27 @@ const getImageUrl = (imagePath) => {
   
   // Si le chemin contient déjà /api/ au début, ne pas ajouter le préfixe
   if (imagePath.startsWith('/api/')) {
-    return `${IMAGE_BASE_URL.split('/api')[0]}${imagePath}`;
+    const baseUrl = IMAGE_BASE_URL.split('/api')[0];
+    console.log('URL d\'API avec base:', `${baseUrl}${imagePath}`);
+    return `${baseUrl}${imagePath}`;
   }
   
   // Vérifier si le chemin commence par / pour éviter les doubles slashes
   const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // Si le chemin contient déjà une URL complète à l'intérieur, l'extraire
+  if (path.includes('https://') || path.includes('http://')) {
+    const urlMatch = path.match(/(https?:\/\/[^\s]+)/);
+    if (urlMatch && urlMatch[1]) {
+      try {
+        const extractedUrl = new URL(urlMatch[1]).toString();
+        console.log('URL extraite du chemin:', extractedUrl);
+        return extractedUrl;
+      } catch (error) {
+        console.error('Erreur lors de l\'extraction de l\'URL:', error);
+      }
+    }
+  }
   
   const finalUrl = `${IMAGE_BASE_URL}${path}`;
   console.log('URL d\'image finalisée:', finalUrl);

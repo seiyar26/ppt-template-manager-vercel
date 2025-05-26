@@ -139,8 +139,11 @@ const TemplateEditor = () => {
           Slides: sortedSlides
         });
         
-        // Set fields
-        setFields(data.template.Fields || []);
+        // Set fields - supporté les deux formats (Fields et fields)
+        // Pour assurer la compatibilité avec l'API qui peut renvoyer les champs dans l'un ou l'autre format
+        const fieldsData = data.template.fields || data.template.Fields || [];
+        console.log('Champs reçus du template:', fieldsData);
+        setFields(fieldsData);
         
         setError(null);
       } catch (err) {
@@ -590,14 +593,14 @@ const TemplateEditor = () => {
               {currentSlide && currentSlide.image_path ? (
                 <img
                   id="slide-image"
-                  src={currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path)}
+                  src={currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path))}
                   alt={`${t.slide} ${currentSlideIndex + 1}`}
                   className="w-full h-auto relative z-10"
                   ref={slideRef}
-                  onLoad={() => console.log('Image chargée avec succès:', currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path))}
+                  onLoad={() => console.log('Image chargée avec succès:', currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path)))}
                   onError={(e) => {
                     console.error('Erreur de chargement de l\'image:', e);
-                    console.error('URL de l\'image:', currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path));
+                    console.error('URL de l\'image:', currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path)));
                   }}
                 />
               ) : (

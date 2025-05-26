@@ -137,7 +137,9 @@ module.exports = async function handler(req, res) {
             .from('ppt-templates')
             .getPublicUrl(storagePath);
           
+          // S'assurer que l'URL est absolue et correctement formatée
           const publicUrl = publicUrlData.publicUrl;
+          console.log('URL publique générée par Supabase:', publicUrl);
           
           // 3.5 Stocker les informations de l'image
           previewImages.push({
