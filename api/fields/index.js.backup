@@ -1,0 +1,90 @@
+const { authenticateToken } = require('../_lib/auth');
+const { Field, Template, sequelize } = require('../_lib/models');
+
+export default async function handler(req, res) {
+  // Gérer CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // S'assurer que la connexion à la base de données est établie
+  await sequelize.authenticate();
+
+  if (req.method === 'POST') {
+    // Créer un nouveau champ
+    return new Promise((resolve) => {
+      authenticateToken(req, res, async () => {
+        try {
+          const {
+            template_id,
+            name,
+            label,
+            type = 'text',
+            default_value = '',
+            position_x = 0,
+            position_y = 0,
+            width = 100,
+            height = 30,
+            font_family = 'Arial',
+            font_size = 14,
+            font_color = '#000000',
+            text_align = 'left',
+            font_style = 'normal'
+          } = req.body;
+
+          if (!template_id || !name || !label) {
+            res.status(400).json({ message: 'Template ID, nom et label requis' });
+            resolve();
+            return;
+          }
+
+          // Vérifier que le template appartient à l'utilisateur
+          const template = await Template.findOne({
+            where: {
+              id: template_id,
+              user_id: req.user.id
+            }
+          });
+
+          if (!template) {
+            res.status(404).json({ message: 'Template non trouvé' });
+            resolve();
+            return;
+          }
+
+          const field = await Field.create({
+            template_id,
+            name,
+            label,
+            type,
+            default_value,
+            position_x,
+            position_y,
+            width,
+            height,
+            font_family,
+            font_size,
+            font_color,
+            text_align,
+            font_style
+          });
+
+          res.status(201).json(field);
+          resolve();
+        } catch (error) {
+          console.error('Erreur création champ:', error);
+          res.status(500).json({ message: 'Erreur interne du serveur' });
+          resolve();
+        }
+      });
+    });
+  }
+
+  res.status(405).json({ message: 'Méthode non autorisée' });
+}

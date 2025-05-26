@@ -1,0 +1,109 @@
+const { authenticateToken } = require('../_lib/auth');
+const { Template, User, Category, sequelize } = require('../_lib/models');
+
+export default async function handler(req, res) {
+  // Gérer CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // S'assurer que la connexion à la base de données est établie
+  await sequelize.authenticate();
+
+  if (req.method === 'GET') {
+    // Récupérer tous les templates
+    return new Promise((resolve) => {
+      authenticateToken(req, res, async () => {
+        try {
+          const templates = await Template.findAll({
+            where: { user_id: req.user.id },
+            include: [
+              {
+                model: User,
+                attributes: ['name', 'email']
+              },
+              {
+                model: Category,
+                as: 'categories',
+                attributes: ['id', 'name', 'color']
+              }
+            ],
+            order: [['created_at', 'DESC']]
+          });
+
+          res.status(200).json(templates);
+          resolve();
+        } catch (error) {
+          console.error('Erreur récupération templates:', error);
+          res.status(500).json({ message: 'Erreur interne du serveur' });
+          resolve();
+        }
+      });
+    });
+  }
+
+  if (req.method === 'POST') {
+    // Créer un nouveau template
+    return new Promise((resolve) => {
+      authenticateToken(req, res, async () => {
+        try {
+          const { name, description, file_path, category_ids = [] } = req.body;
+
+          if (!name || !file_path) {
+            res.status(400).json({ message: 'Nom et chemin du fichier requis' });
+            resolve();
+            return;
+          }
+
+          const template = await Template.create({
+            name,
+            description,
+            file_path,
+            user_id: req.user.id
+          });
+
+          // Associer les catégories si spécifiées
+          if (category_ids.length > 0) {
+            const categories = await Category.findAll({
+              where: {
+                id: category_ids,
+                user_id: req.user.id
+              }
+            });
+            await template.setCategories(categories);
+          }
+
+          // Récupérer le template avec ses relations
+          const templateWithRelations = await Template.findByPk(template.id, {
+            include: [
+              {
+                model: User,
+                attributes: ['name', 'email']
+              },
+              {
+                model: Category,
+                as: 'categories',
+                attributes: ['id', 'name', 'color']
+              }
+            ]
+          });
+
+          res.status(201).json(templateWithRelations);
+          resolve();
+        } catch (error) {
+          console.error('Erreur création template:', error);
+          res.status(500).json({ message: 'Erreur interne du serveur' });
+          resolve();
+        }
+      });
+    });
+  }
+
+  res.status(405).json({ message: 'Méthode non autorisée' });
+}
