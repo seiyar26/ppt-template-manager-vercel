@@ -69,7 +69,9 @@ const TemplateFill = () => {
         
         // Initialisation des valeurs des champs avec les valeurs par défaut
         const initialValues = {};
-        const fields = templateData.Fields || [];
+        // Support des deux formats (Fields avec majuscule ou fields avec minuscule)
+        const fields = templateData.fields || templateData.Fields || [];
+        console.log('Champs récupérés dans TemplateFill:', fields.length, fields);
         
         fields.forEach(field => {
           initialValues[field.name] = field.default_value || '';
@@ -153,11 +155,37 @@ const TemplateFill = () => {
       console.log('Chemin du fichier généré:', filePath);
       
       // Utiliser directement l'URL complète pour le téléchargement
-      const downloadUrl = `${IMAGE_BASE_URL}${filePath}`;
-      console.log('URL de téléchargement:', downloadUrl);
+      // S'assurer que l'URL est correctement formée avec un slash entre le domaine et le chemin
+      let downloadUrl;
       
-      // Ouvrir le fichier dans un nouvel onglet pour le téléchargement
-      window.open(downloadUrl, '_blank');
+      // Si nous avons directement une URL complète dans la réponse, l'utiliser
+      if (res.data.fileUrl) {
+        downloadUrl = res.data.fileUrl;
+        console.log('URL directe fournie par l\'API:', downloadUrl);
+      } else {
+        // Sinon construire l'URL en s'assurant qu'il y a un slash entre le domaine et le chemin
+        const baseUrl = IMAGE_BASE_URL.endsWith('/') ? IMAGE_BASE_URL : `${IMAGE_BASE_URL}/`;
+        const path = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+        downloadUrl = `${baseUrl}${path}`;
+        console.log('URL construite:', downloadUrl);
+      }
+      
+      console.log('URL de téléchargement finale:', downloadUrl);
+      
+      // Créer un élément a invisible pour forcer le téléchargement
+      const downloadLink = document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = `${documentName || 'document'}_${format}.${format}`;  // Nom du fichier pour le téléchargement
+      downloadLink.target = '_blank';
+      document.body.appendChild(downloadLink);
+      
+      // Déclencher le clic
+      downloadLink.click();
+      
+      // Nettoyer
+      setTimeout(() => {
+        document.body.removeChild(downloadLink);
+      }, 100);
       
       // Navigation vers l'historique des exports après génération réussie
       const navigateToHistory = window.confirm('Document généré avec succès ! Voulez-vous consulter l\'historique des exports ?');
@@ -218,7 +246,11 @@ const TemplateFill = () => {
   // Traitement défensif des données pour éviter les erreurs d'accès à des propriétés de undefined
   // Vérifications complètes selon les principes SOLID
   const hasValidSlides = template.Slides && Array.isArray(template.Slides) && template.Slides.length > 0;
-  const hasValidFields = template.Fields && Array.isArray(template.Fields);
+  
+  // Support des deux formats (Fields avec majuscule ou fields avec minuscule)
+  const templateFields = template.fields || template.Fields || [];
+  console.log('Champs disponibles dans le template:', templateFields);
+  const hasValidFields = templateFields && Array.isArray(templateFields);
   
   // Si aucune diapositive valide n'est présente, afficher un message d'erreur
   if (!hasValidSlides) {
@@ -243,7 +275,7 @@ const TemplateFill = () => {
   // Accès sécurisé aux données
   const currentSlide = hasValidSlides ? template.Slides[currentSlideIndex] : null;
   const currentSlideFields = hasValidFields 
-    ? template.Fields.filter(field => field.slide_index === currentSlideIndex)
+    ? templateFields.filter(field => field.slide_index === currentSlideIndex)
     : [];
   
   // Vérification supplémentaire de la diapositive courante
@@ -267,7 +299,7 @@ const TemplateFill = () => {
   }
   
   // Group fields by slide for the form - avec vérification défensive
-  const fieldsBySlide = hasValidFields ? template.Fields.reduce((acc, field) => {
+  const fieldsBySlide = hasValidFields ? templateFields.reduce((acc, field) => {
     // Vérification que le champ a un index de diapositive valide
     const slideIndex = field.slide_index !== undefined ? field.slide_index : 0;
     

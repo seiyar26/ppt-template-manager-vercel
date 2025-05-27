@@ -13,19 +13,24 @@ import TemplateFill from './pages/TemplateFill';
 import Categories from './pages/Categories';
 import ExportHistory from './pages/ExportHistory';
 
-// Définition des couleurs Elly Energie pour l'application - version blanc et bleu clair
+// Définition des couleurs pour l'application - version premium courtier en énergie (inspiré de MonCourtierEnergie.com)
 export const ELLY_COLORS = {
-  primary: '#4DA8DA',    // Bleu clair - couleur principale
-  secondary: '#87CEEB',  // Bleu ciel plus clair - couleur secondaire
-  tertiary: '#F0F8FF',   // Blanc bleuté pour backgrounds
-  accent: '#E0F7FF',     // Bleu très clair pour accents
-  dark: '#2C5F8E',       // Bleu foncé pour texte
-  light: '#FFFFFF',      // Blanc pour contrastes
-  gray: '#F5F9FF',       // Gris bleuté clair pour sections alternatives
-  action: '#1E88E5',     // Bleu plus vif pour boutons d'action
-  success: '#43A047',    // Vert pour boutons de confirmation/succès
-  warning: '#FFA000',    // Orange pour boutons d'attention/avertissement
-  danger: '#E53935',     // Rouge pour boutons de suppression/danger
+  primary: '#002657',      // Bleu marine profond - couleur principale (inspiré de MonCourtierEnergie)
+  secondary: '#32BE5B',    // Vert énergie vif - couleur secondaire (inspiré de MonCourtierEnergie)
+  tertiary: '#F9FAFC',     // Blanc légèrement bleuté pour backgrounds
+  accent: '#FF9F1C',       // Orange énergique pour accents et call-to-actions
+  dark: '#001A41',         // Bleu marine très foncé pour texte
+  light: '#FFFFFF',        // Blanc pour contrastes
+  gray: '#EFF3F9',         // Gris légèrement bleuté pour sections alternatives
+  action: '#0081C7',       // Bleu vif pour boutons d'action
+  success: '#00C896',      // Vert émeraude pour boutons de confirmation/succès
+  warning: '#FF7D00',      // Orange pour boutons d'attention/avertissement
+  danger: '#E02424',       // Rouge pour boutons de suppression/danger
+  gradient: 'linear-gradient(135deg, #002657 0%, #32BE5B 100%)', // Dégradé bleu-vert comme MonCourtierEnergie
+  lightGradient: 'linear-gradient(135deg, rgba(0,38,87,0.03) 0%, rgba(50,190,91,0.03) 100%)', // Dégradé léger pour backgrounds
+  gradientLight: 'linear-gradient(135deg, rgba(0,38,87,0.8) 0%, rgba(50,190,91,0.8) 100%)', // Dégradé semi-transparent
+  shadowPrimary: '0 10px 15px -3px rgba(0, 38, 87, 0.1), 0 4px 6px -2px rgba(0, 38, 87, 0.05)', // Ombre avec couleur primaire
+  shadowSecondary: '0 10px 15px -3px rgba(50, 190, 91, 0.1), 0 4px 6px -2px rgba(50, 190, 91, 0.05)', // Ombre avec couleur secondaire
 };
 
 function App() {
@@ -34,7 +39,7 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="min-h-screen font-sans flex flex-col" style={{
-            background: `linear-gradient(145deg, ${ELLY_COLORS.tertiary} 0%, ${ELLY_COLORS.light} 100%)`,
+            background: ELLY_COLORS.lightGradient,
             color: ELLY_COLORS.dark
           }}>
             <Navbar />

@@ -1,18 +1,54 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Configuration pour PostgreSQL (local ou cloud)
+// Configuration pour PostgreSQL ou SQLite
 let sequelize;
 
+// Vérifier si on utilise SQLite (prioritaire pour le développement local)
+if (process.env.DB_DIALECT === 'sqlite') {
+  console.log('Utilisation de SQLite pour la base de données locale');
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: process.env.DB_STORAGE || 'database.sqlite',
+    logging: console.log,
+    define: {
+      timestamps: true,
+      underscored: true
+    }
+  });
+} 
 // En environnement Zeabur, POSTGRES_CONNECTION_STRING est fourni au lieu de DATABASE_URL
-if (process.env.POSTGRES_CONNECTION_STRING && !process.env.DATABASE_URL) {
+else if (process.env.POSTGRES_CONNECTION_STRING && !process.env.DATABASE_URL) {
   console.log('Variable POSTGRES_CONNECTION_STRING détectée, conversion en DATABASE_URL');
   // Sans SSL - problème de compatibilité avec certains serveurs PostgreSQL
   process.env.DATABASE_URL = process.env.POSTGRES_CONNECTION_STRING;
+  
+  // Continuer avec la configuration DATABASE_URL
+  configureDatabaseUrl();
+}
+// Vérifier si on a une URL de connexion complète
+else if (process.env.DATABASE_URL) {
+  configureDatabaseUrl();
+} 
+// Sinon, utiliser les variables individuelles
+else {
+  console.log('Utilisation des paramètres de connexion PostgreSQL individuels');
+  sequelize = new Sequelize({
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: process.env.DB_PORT || 5432,
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'postgres',
+    dialect: 'postgres',
+    logging: console.log,
+    define: {
+      timestamps: true,
+      underscored: true
+    }
+  });
 }
 
-// Vérifier si on a une URL de connexion complète
-if (process.env.DATABASE_URL) {
+function configureDatabaseUrl() {
   console.log('Utilisation de l\'URL de connexion PostgreSQL complète');
   
   const isProd = process.env.NODE_ENV === 'production';
@@ -44,22 +80,6 @@ if (process.env.DATABASE_URL) {
       min: 0,
       acquire: 30000,
       idle: 10000
-    }
-  });
-} else {
-  // Sinon, utiliser les variables individuelles
-  console.log('Utilisation des paramètres de connexion PostgreSQL individuels');
-  sequelize = new Sequelize({
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: process.env.DB_PORT || 5432,
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'postgres',
-    dialect: 'postgres',
-    logging: console.log,
-    define: {
-      timestamps: true,
-      underscored: true
     }
   });
 }

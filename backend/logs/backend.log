@@ -349,3 +349,120 @@ DATA: {
   }
 }
 --------------------------------------------
+[2025-05-27T14:38:52.735Z] 🔍 DIAGNOSTIC SYSTÈME
+DATA: {
+  timestamp: '2025-05-27T14:38:52.734Z',
+  environment: {
+    nodeVersion: 'v23.11.0',
+    platform: 'darwin',
+    arch: 'arm64',
+    memory: { free: '209 MB', total: '49152 MB' },
+    uptime: '1587 minutes'
+  },
+  directories: {
+    logs: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/logs',
+      exists: true,
+      writable: true
+    },
+    uploads: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads',
+      exists: true,
+      writable: true
+    },
+    'uploads/temp': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/temp',
+      exists: true,
+      writable: true
+    },
+    'uploads/templates': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/templates',
+      exists: true,
+      writable: true
+    },
+    'uploads/exports': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/exports',
+      exists: true,
+      writable: true
+    }
+  }
+}
+--------------------------------------------
+[2025-05-27T14:39:40.330Z] 🔍 DIAGNOSTIC SYSTÈME
+DATA: {
+  timestamp: '2025-05-27T14:39:40.125Z',
+  environment: {
+    nodeVersion: 'v23.11.0',
+    platform: 'darwin',
+    arch: 'arm64',
+    memory: { free: '556 MB', total: '49152 MB' },
+    uptime: '1588 minutes'
+  },
+  directories: {
+    logs: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/logs',
+      exists: true,
+      writable: true
+    },
+    uploads: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads',
+      exists: true,
+      writable: true
+    },
+    'uploads/temp': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/temp',
+      exists: true,
+      writable: true
+    },
+    'uploads/templates': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/templates',
+      exists: true,
+      writable: true
+    },
+    'uploads/exports': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/exports',
+      exists: true,
+      writable: true
+    }
+  }
+}
+--------------------------------------------
+[2025-05-27T14:41:31.413Z] 🔍 DIAGNOSTIC SYSTÈME
+DATA: {
+  timestamp: '2025-05-27T14:41:31.412Z',
+  environment: {
+    nodeVersion: 'v23.11.0',
+    platform: 'darwin',
+    arch: 'arm64',
+    memory: { free: '508 MB', total: '49152 MB' },
+    uptime: '1590 minutes'
+  },
+  directories: {
+    logs: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/logs',
+      exists: true,
+      writable: true
+    },
+    uploads: {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads',
+      exists: true,
+      writable: true
+    },
+    'uploads/temp': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/temp',
+      exists: true,
+      writable: true
+    },
+    'uploads/templates': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/templates',
+      exists: true,
+      writable: true
+    },
+    'uploads/exports': {
+      path: '/Users/michaeltenenbaum/CascadeProjects/ppt-template-manager-vercel/backend/uploads/exports',
+      exists: true,
+      writable: true
+    }
+  }
+}
+--------------------------------------------

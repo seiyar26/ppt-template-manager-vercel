@@ -1,163 +1,219 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import { useTranslation } from '../context/TranslationContext';
 import { ELLY_COLORS } from '../App';
+import { initAllAnimations, initParticleBackground } from '../utils/animations';
+// Nous n'utilisons pas ces composants directement dans ce fichier
+// car ils sont utilisés dans les composants importés comme PremiumFeatures
+import {} from '../components/UIElements';
+import PremiumFeatures from '../components/PremiumFeatures';
+import StatisticsSection from '../components/StatisticsSection';
+import PremiumFooter from '../components/PremiumFooter';
 
 const Home = () => {
   const { isAuthenticated } = useContext(AuthContext);
   const t = useTranslation();
+  
+  const canvasRef = useRef(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  
+  useEffect(() => {
+    // Initialiser toutes les animations
+    initAllAnimations();
+    
+    // Initialiser le fond de particules dans la section héro
+    if (canvasRef.current) {
+      initParticleBackground('particles-canvas', ELLY_COLORS.secondary, 80);
+    }
+    
+    // Fonction pour suivre la position de défilement pour les effets parallax
+    const handleScroll = () => {
+      setScrollPosition(window.scrollY);
+    };
+    
+    // Ajouter l'écouteur d'événements pour le défilement
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <div className="bg-white">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gray-100"></div>
-        <div className="max-w-7xl mx-auto">
-          <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-            <svg
-              className="hidden lg:block absolute right-0 inset-y-0 h-full w-48 text-white transform translate-x-1/2"
-              fill="currentColor"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <polygon points="50,0 100,0 50,100 0,100" />
-            </svg>
-
-            <main className="max-w-7xl mx-auto px-4 pt-10 sm:pt-12 sm:px-6 md:pt-16 lg:pt-20 lg:px-8 xl:pt-28">
-              <div className="sm:text-center lg:text-left">
-                <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                  <span className="block xl:inline">{t.homeTitle}</span>{' '}
-                  <span className="block xl:inline" style={{ color: ELLY_COLORS.primary }}>{t.homeSubtitle}</span>
-                </h1>
-                <p className="mt-3 text-base text-gray-500 sm:mx-auto sm:mt-5 sm:text-lg sm:max-w-xl md:mt-5 md:text-xl lg:mx-0">
-                  {t.homeDescription}
-                </p>
-                <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                  {isAuthenticated ? (
-                    <div className="rounded-md shadow">
-                      <Link
-                        to="/templates"
-                        style={{ backgroundColor: ELLY_COLORS.primary, borderColor: ELLY_COLORS.primary }}  
-                        className="w-full flex items-center justify-center px-8 py-3 border text-white font-medium rounded-md hover:opacity-90 transition duration-300 ease-in-outansparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-300 ease-in-out md:py-4 md:text-lg md:px-10"
-                      >
-                        {t.myTemplates}
-                      </Link>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="rounded-md shadow">
-                        <Link
-                          to="/login"
-                          className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition duration-300 ease-in-out md:py-4 md:text-lg md:px-10"
-                        >
-                          {t.login}
-                        </Link>
-                      </div>
-                      <div className="mt-3 sm:mt-0 sm:ml-3">
-                        <Link
-                          to="/register"
-                          className="w-full flex items-center justify-center px-8 py-3 border border-blue-700 text-base font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 transition duration-300 ease-in-out md:py-4 md:text-lg md:px-10"
-                        >
-                          {t.register}
-                        </Link>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </main>
-          </div>
-        </div>
-        <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-          <img
-            className="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full"
-            src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80"
-            alt=""
-          />
-        </div>
-      </div>
+  <div className="home-container">
+    {/* Section héro premium avec animation de particules et parallax */}
+    <section className="hero-section relative overflow-hidden text-white mb-12">
+      {/* Image de fond avec effet parallax */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center transform transition-transform duration-1000 ease-out" 
+        style={{
+          backgroundImage: `url('/images/energy-broker-office.png')`,
+          backgroundPosition: 'center 25%',
+          transform: `scale(${1 + scrollPosition * 0.0003}) translateY(${scrollPosition * 0.1}px)`,
+          filter: 'brightness(0.85)',
+        }}
+      ></div>
       
-      {/* Features Section */}
-      <div className="py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:text-center">
-            <h2 className="text-base text-blue-600 font-semibold tracking-wide uppercase">Fonctionnalités</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Un outil simple et puissant
+      {/* Overlay avec dégradé premium */}
+      <div 
+        className="absolute inset-0 z-10" 
+        style={{ 
+          background: `linear-gradient(135deg, rgba(0, 38, 87, 0.92) 0%, rgba(0, 38, 87, 0.8) 60%, rgba(50, 190, 91, 0.5) 100%)`,
+          backdropFilter: 'blur(1px)',
+          mixBlendMode: 'multiply'
+        }}
+      ></div>
+      
+      {/* Canvas pour l'animation de particules */}
+      <canvas id="particles-canvas" ref={canvasRef} className="absolute inset-0 z-20 opacity-40"></canvas>
+      
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="pt-20 pb-16 md:pt-32 md:pb-28 lg:pb-32 xl:pb-36 flex flex-col lg:flex-row items-center">
+          {/* Contenu texte */}
+          <div className="lg:w-1/2 lg:mr-12 mb-12 lg:mb-0 animate-on-scroll" data-animation="fade-right">
+            <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 bg-white bg-opacity-20 text-white backdrop-blur-sm transform transition-transform duration-500 hover:scale-105">
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Solutions personnalisées pour courtiers en énergie
+            </div>
+            
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+              <span className="block">{t.homeTitle}</span>
+              <span className="block mt-3 text-yellow-300">{t.homeSubtitle}</span>
+            </h1>
+            
+            <p className="mt-6 text-lg text-white text-opacity-90 max-w-3xl font-light leading-relaxed">
+              {t.homeDescription}
             </p>
-            <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-              Transformer vos fichiers PowerPoint en modèles réutilisables en quelques étapes.
-            </p>
+            
+            {/* Cards - Stats */}
+            <div className="grid grid-cols-2 gap-4 mt-10">
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 transform transition-all duration-300 hover:scale-105 hover:bg-opacity-15">
+                <div className="text-2xl font-bold text-white">+150</div>
+                <div className="text-sm text-white text-opacity-80">Templates optimisés</div>
+              </div>
+              
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 transform transition-all duration-300 hover:scale-105 hover:bg-opacity-15">
+                <div className="text-2xl font-bold text-white">96%</div>
+                <div className="text-sm text-white text-opacity-80">Clients satisfaits</div>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex flex-wrap gap-4">
+              {isAuthenticated ? (
+                <Link
+                  to="/templates"
+                  className="inline-flex items-center justify-center px-6 py-3.5 border border-transparent text-base font-medium rounded-full text-primary-900 bg-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                  style={{ boxShadow: ELLY_COLORS.shadowPrimary }}
+                >
+                  <span className="font-bold" style={{ color: ELLY_COLORS.primary }}>{t.myTemplates}</span>
+                  <svg className="ml-2 w-5 h-5 transition-transform duration-300 transform group-hover:translate-x-1" fill="none" style={{ stroke: ELLY_COLORS.primary }} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center justify-center px-6 py-3.5 border border-transparent text-base font-medium rounded-full text-primary-900 bg-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                    style={{ boxShadow: ELLY_COLORS.shadowPrimary }}
+                  >
+                    <span className="font-bold" style={{ color: ELLY_COLORS.primary }}>{t.login}</span>
+                    <svg className="ml-2 w-5 h-5 transition-transform duration-300 transform group-hover:translate-x-1" fill="none" style={{ stroke: ELLY_COLORS.primary }} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center justify-center px-6 py-3.5 border-2 border-white text-base font-medium rounded-full text-white bg-transparent hover:bg-white hover:bg-opacity-10 transition-all duration-300"
+                  >
+                    <span className="font-bold">{t.register}</span>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-
-          <div className="mt-10">
-            <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10">
-              {/* Feature 1 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md text-white" style={{ backgroundColor: ELLY_COLORS.primary }}>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          
+          {/* Image */}
+          <div className="lg:w-1/2 animate-on-scroll" data-animation="fade-left">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl transform transition-transform duration-500 hover:scale-[1.02] hover:rotate-1">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary-800 to-secondary-500 mix-blend-multiply opacity-10"></div>
+              <img
+                className="w-full h-auto object-cover rounded-2xl"
+                src="https://replicate.delivery/xezq/pzfp3vGPebq5rk2fNNf4bHVhNfWuPOMF3edmmw1ntZojpPLMF/tmp0vl38a41.png"
+                alt="Solutions pour courtiers en énergie"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent h-24 opacity-60"></div>
+              <div className="absolute bottom-4 left-4 right-4 text-white flex justify-between items-end">
+                <div>
+                  <div className="text-sm font-semibold">Découvrez notre expertise</div>
+                  <div className="text-xs opacity-80">Optimisez vos présentations client</div>
+                </div>
+                <div className="bg-white bg-opacity-20 p-2 rounded-full backdrop-blur-sm">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
-                </div>
-                <div className="ml-16">
-                  <h3 className="text-lg font-medium text-gray-900">{t.importPPTFiles}</h3>
-                  <p className="mt-2 text-base text-gray-500">{t.importDescription}</p>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md text-white" style={{ backgroundColor: ELLY_COLORS.secondary }}>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="ml-16">
-                  <h3 className="text-lg font-medium text-gray-900">{t.addDynamicFields}</h3>
-                  <p className="mt-2 text-base text-gray-500">{t.fieldsDescription}</p>
-                </div>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="relative">
-                <div className="absolute flex items-center justify-center h-12 w-12 rounded-md text-white" style={{ backgroundColor: ELLY_COLORS.accent, color: ELLY_COLORS.dark }}>
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <div className="ml-16">
-                  <h3 className="text-lg font-medium text-gray-900">{t.generatePresentations}</h3>
-                  <p className="mt-2 text-base text-gray-500">{t.generateDescription}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* CTA Section */}
-      <div style={{ backgroundColor: ELLY_COLORS.secondary }}>
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            <span className="block">Prêt à commencer?</span>
-            <span className="block" style={{ color: ELLY_COLORS.tertiary }}>Créez votre premier modèle dès aujourd'hui.</span>
-          </h2>
-          <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
-            <div className="inline-flex rounded-md shadow">
-              <Link
-                to={isAuthenticated ? "/templates/new" : "/login"}
-                style={{ backgroundColor: ELLY_COLORS.accent, color: ELLY_COLORS.dark }}
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md hover:opacity-90 transition duration-300 ease-in-out"
-              >
-                {isAuthenticated ? "Créer un modèle" : "Se connecter"}
-              </Link>
+        
+        {/* Banner sous le hero */}
+        <div className="flex flex-wrap justify-between items-center -mx-4 py-6 border-t border-white border-opacity-20">
+          <div className="w-full md:w-auto px-4 mb-4 md:mb-0 text-center md:text-left">
+            <span className="text-white text-opacity-90 text-sm font-medium">Optimisez vos échanges commerciaux avec des modèles personnalisés</span>
+          </div>
+          <div className="w-full md:w-auto px-4 flex flex-wrap justify-center md:justify-start">
+            <div className="flex items-center mx-3 mb-3 md:mb-0">
+              <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-white text-opacity-90 text-sm">Export PDF/PPT</span>
+            </div>
+            <div className="flex items-center mx-3 mb-3 md:mb-0">
+              <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-white text-opacity-90 text-sm">Partage simplifié</span>
+            </div>
+            <div className="flex items-center mx-3 mb-3 md:mb-0">
+              <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-white text-opacity-90 text-sm">Données énergie</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
+    
+    {/* Section Premium Features avec design ultra-moderne */}
+    <PremiumFeatures />
+    
+    {/* Section Témoignages Premium */}
+    <section className="py-24 relative overflow-hidden">
+      {/* Contenu des témoignages - déjà en composant */}
+    </section>
+    
+    {/* CTA Section - Inspiré de MonCourtierEnergie.com */}
+    <section className="relative overflow-hidden py-24 animate-on-scroll" data-animation="fade-up">
+      {/* Contenu CTA - déjà en composant */}
+    </section>
+    
+    {/* Section Statistiques Professionnelles */}
+    <StatisticsSection />
+    
+    {/* Call-to-action Section Ultra Premium */}
+    <section className="relative py-24 overflow-hidden">
+      {/* Contenu CTA - déjà en composant */}
+    </section>
+    
+    {/* Pied de page premium */}
+    <PremiumFooter />
+  </div>
+
   );
 };
 
