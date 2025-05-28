@@ -24,7 +24,10 @@ const TemplateList = () => {
         
         // Charger les catégories
         const categoriesData = await categoryService.getCategories();
-        const fetchedCategories = categoriesData.data.categories || [];
+        console.log('Catégories reçues:', categoriesData);
+        // Adapter à la structure de notre API - qui renvoie directement un tableau
+        const fetchedCategories = Array.isArray(categoriesData) ? categoriesData : 
+                              (categoriesData.data?.categories || categoriesData.data || []);
         
         // Ajouter une catégorie "Tous" pour afficher tous les templates
         const allCategories = [
@@ -39,23 +42,27 @@ const TemplateList = () => {
         const templatesData = await templateService.getAllTemplates(selectedCategoryId);
         console.log('Réponse des modèles:', templatesData);
         
+        // Adapter à la structure de notre API - qui renvoie un tableau ou un objet avec data
+        const templates = Array.isArray(templatesData) ? templatesData : 
+                        (templatesData.data || templatesData.templates || []);
+        
         // Mettre à jour le compteur de templates par catégorie
         const updatedCategories = allCategories.map(category => {
           if (category.id === null) {
             // La catégorie "Tous" contient tous les templates
-            return { ...category, count: templatesData.templates.length };
+            return { ...category, count: templates.length };
           }
           
           // Compter les templates dans cette catégorie
-          const count = templatesData.templates.filter(template => 
-            template.categories?.some(cat => cat.id === category.id)
+          const count = templates.filter(template => 
+            template.categories?.some(cat => cat.id === category.id) || template.category_id === category.id
           ).length;
           
           return { ...category, count };
         });
         
         setCategories(updatedCategories);
-        setTemplates(templatesData.templates || []);
+        setTemplates(templates);
         setError(null);
       } catch (err) {
         console.error('Erreur lors du chargement des données:', err);

@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "message": "Conversion simulée réussie",
+  "mainPreviewUrl": "https://via.placeholder.com/800x600/2196f3/FFFFFF?text=Aperçu+Principal",
+  "previewImages": [
+    "https://via.placeholder.com/800x600/2196f3/FFFFFF?text=Diapositive+1",
+    "https://via.placeholder.com/800x600/2196f3/FFFFFF?text=Diapositive+2",
+    "https://via.placeholder.com/800x600/2196f3/FFFFFF?text=Diapositive+3"
+  ]
+}

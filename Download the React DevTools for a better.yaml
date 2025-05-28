@@ -1,0 +1,94 @@
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools bundle.js:54750:21
+🔌 Application en mode PRODUCTION - Connexion à un backend réel bundle.js:81037:11
+🔍 Environnement détecté:  
+Object { hostname: "127.0.0.1", isVercelApp: true, nodeEnv: "development", isVercel: true, reactAppApiUrl: "http://localhost:4000/api" }
+bundle.js:81054:11
+🚀 Mode production Vercel détecté - Utilisation de l'URL relative: /api bundle.js:81058:13
+API URL configurée: /api bundle.js:81079:9
+URL de base des images: http://127.0.0.1:54121 bundle.js:81080:9
+Bouton de connexion admin ajouté à l'interface bundle.js:81831:11
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. bundle.js:58036:13
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. bundle.js:58036:13
+Chargement des données utilisateur avec le token bundle.js:73688:17
+Tentative de récupération de l'utilisateur avec le endpoint correct bundle.js:81232:13
+Chargement des données utilisateur avec le token bundle.js:73688:17
+Tentative de récupération de l'utilisateur avec le endpoint correct bundle.js:81232:13
+Token trouvé, ajout aux en-têtes: demo-token-1234... 2 bundle.js:81118:13
+REQUEST - GET /auth/user bundle.js:80634:13
+Headers: 
+Object { Accept: "application/json", "Content-Type": "application/json", Authorization: "[REDACTED]" }
+bundle.js:80636:15
+Body: undefined bundle.js:80637:15
+REQUEST - GET /auth/user bundle.js:80634:13
+Headers: 
+Object { Accept: "application/json", "Content-Type": "application/json", Authorization: "[REDACTED]" }
+bundle.js:80636:15
+Body: undefined bundle.js:80637:15
+A resource is blocked by OpaqueResponseBlocking, please check browser console for details. tmpuw1q33fp.png
+A resource is blocked by OpaqueResponseBlocking, please check browser console for details. tmp0vl38a41.png
+RESPONSE - GET /auth/user bundle.js:80634:13
+Status: 200 (Success) bundle.js:80639:15
+Duration: 9ms bundle.js:80640:15
+Headers: 
+Object { "access-control-allow-credentials": "true", "access-control-allow-origin": "http://localhost:3000", "content-length": "82", "content-type": "application/json; charset=utf-8", date: "Wed, 28 May 2025 17:23:44 GMT", etag: 'W/"52-cyBvNsW0dr270KkIeHhcmwTwCjk"', vary: "Origin", "x-powered-by": "Express" }
+bundle.js:80641:15
+Body: 
+Object { user: {…} }
+bundle.js:80642:15
+Réponse get /auth/user: 200 bundle.js:81129:11
+Données utilisateur reçues: 
+Object { user: {…} }
+bundle.js:73690:17
+RESPONSE - GET /auth/user bundle.js:80634:13
+Status: 200 (Success) bundle.js:80639:15
+Duration: 14ms bundle.js:80640:15
+Headers: 
+Object { "access-control-allow-credentials": "true", "access-control-allow-origin": "http://localhost:3000", "content-length": "82", "content-type": "application/json; charset=utf-8", date: "Wed, 28 May 2025 17:23:44 GMT", etag: 'W/"52-cyBvNsW0dr270KkIeHhcmwTwCjk"', vary: "Origin", "x-powered-by": "Express" }
+bundle.js:80641:15
+Body: 
+Object { user: {…} }
+bundle.js:80642:15
+Réponse get /auth/user: 200 bundle.js:81129:11
+Données utilisateur reçues: 
+Object { user: {…} }
+bundle.js:73690:17
+Service Worker enregistré avec succès: http://127.0.0.1:54121/ register-sw.js:6:17
+Token trouvé, ajout aux en-têtes: demo-token-1234... 2 bundle.js:81118:13
+REQUEST - GET /categories bundle.js:80634:13
+Headers: 
+Object { Accept: "application/json", "Content-Type": "application/json", Authorization: "[REDACTED]" }
+bundle.js:80636:15
+Body: undefined bundle.js:80637:15
+REQUEST - GET /categories bundle.js:80634:13
+Headers: 
+Object { Accept: "application/json", "Content-Type": "application/json", Authorization: "[REDACTED]" }
+bundle.js:80636:15
+Body: undefined bundle.js:80637:15
+RESPONSE - GET /categories bundle.js:80634:13
+Status: 200 (Success) bundle.js:80639:15
+Duration: 9ms bundle.js:80640:15
+Headers: 
+Object { "access-control-allow-credentials": "true", "access-control-allow-origin": "http://localhost:3000", "content-length": "213", "content-type": "application/json; charset=utf-8", date: "Wed, 28 May 2025 17:23:46 GMT", etag: 'W/"d5-xvF7lWcWjjQWEUo6zT+2YtPrefo"', vary: "Origin", "x-powered-by": "Express" }
+bundle.js:80641:15
+Body: 
+Array(4) [ {…}, {…}, {…}, {…} ]
+bundle.js:80642:15
+Réponse get /categories: 200 bundle.js:81129:11
+Erreur lors du chargement des données: TypeError: categoriesData.data is undefined
+    fetchData TemplateList.js:27
+cascade-browser-integration.js:2:476785
+Message d'erreur: categoriesData.data is undefined cascade-browser-integration.js:2:476785
+RESPONSE - GET /categories bundle.js:80634:13
+Status: 200 (Success) bundle.js:80639:15
+Duration: 10ms bundle.js:80640:15
+Headers: 
+Object { "access-control-allow-credentials": "true", "access-control-allow-origin": "http://localhost:3000", "content-length": "213", "content-type": "application/json; charset=utf-8", date: "Wed, 28 May 2025 17:23:46 GMT", etag: 'W/"d5-xvF7lWcWjjQWEUo6zT+2YtPrefo"', vary: "Origin", "x-powered-by": "Express" }
+bundle.js:80641:15
+Body: 
+Array(4) [ {…}, {…}, {…}, {…} ]
+bundle.js:80642:15
+Réponse get /categories: 200 bundle.js:81129:11
+Erreur lors du chargement des données: TypeError: categoriesData.data is undefined
+    fetchData TemplateList.js:27
+cascade-browser-integration.js:2:476785
+Message d'erreur: categoriesData.data is undefined cascade-browser-integration.js:2:476785

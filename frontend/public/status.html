@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>État du système | PPT Template Manager</title>
+    <style>
+        :root {
+            --color-primary: #002657;
+            --color-secondary: #32BE5B;
+            --color-tertiary: #F9FAFC;
+            --color-accent: #FF9F1C;
+            --color-dark: #001A41;
+            --color-light: #FFFFFF;
+            --color-success: #00C896;
+            --color-warning: #FF7D00;
+            --color-danger: #E02424;
+            --shadow-primary: 0 10px 15px -3px rgba(0, 38, 87, 0.1), 0 4px 6px -2px rgba(0, 38, 87, 0.05);
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-tertiary);
+            color: var(--color-dark);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            background-color: var(--color-primary);
+            color: var(--color-light);
+            padding: 1.5rem 0;
+            text-align: center;
+            box-shadow: var(--shadow-primary);
+        }
+        
+        h1, h2, h3 {
+            margin-top: 0;
+            font-weight: 600;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--color-primary);
+            border-bottom: 2px solid var(--color-secondary);
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-card {
+            background-color: var(--color-light);
+            border-radius: 8px;
+            box-shadow: var(--shadow-primary);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .status-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-dot.operational {
+            background-color: var(--color-success);
+        }
+        
+        .status-dot.warning {
+            background-color: var(--color-warning);
+        }
+        
+        .status-dot.error {
+            background-color: var(--color-danger);
+        }
+        
+        .status-dot.unknown {
+            background-color: #cccccc;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+        
+        .config-value {
+            font-family: monospace;
+            background-color: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: var(--color-primary);
+            color: var(--color-light);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: var(--color-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--color-secondary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #27a64f;
+        }
+        
+        .btn-danger {
+            background-color: var(--color-danger);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c61d1d;
+        }
+        
+        .logs-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        
+        .timestamp {
+            color: #569cd6;
+        }
+        
+        .log-info {
+            color: #3a96dd;
+        }
+        
+        .log-warning {
+            color: #ce9178;
+        }
+        
+        .log-error {
+            color: #f44747;
+        }
+        
+        footer {
+            background-color: var(--color-primary);
+            color: var(--color-light);
+            padding: 1rem 0;
+            text-align: center;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>État du système</h1>
+            <p>Vérification et diagnostic de l'application PPT Template Manager</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="status-card">
+            <h2>Aperçu général</h2>
+            
+            <div class="status-overview">
+                <div>
+                    <h3>Application Web</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot operational" id="app-status-dot"></div>
+                        <span id="app-status-text">Opérationnel</span>
+                    </div>
+                    <p id="app-status-details">L'application fonctionne normalement.</p>
+                </div>
+                
+                <div>
+                    <h3>API Backend</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot warning" id="api-status-dot"></div>
+                        <span id="api-status-text">Mode démonstration</span>
+                    </div>
+                    <p id="api-status-details">Le backend utilise des réponses simulées.</p>
+                </div>
+                
+                <div>
+                    <h3>Service Worker</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot unknown" id="sw-status-dot"></div>
+                        <span id="sw-status-text">Vérification...</span>
+                    </div>
+                    <p id="sw-status-details">Détection du Service Worker en cours.</p>
+                </div>
+                
+                <div>
+                    <h3>Stockage</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot unknown" id="storage-status-dot"></div>
+                        <span id="storage-status-text">Vérification...</span>
+                    </div>
+                    <p id="storage-status-details">Vérification de la connexion Supabase.</p>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="btn" id="refresh-status-btn">Actualiser l'état</button>
+                <button class="btn btn-secondary" id="test-api-btn">Tester les API</button>
+                <button class="btn btn-secondary" id="clear-cache-btn">Vider le cache</button>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <h2>Configuration de l'environnement</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Paramètre</th>
+                        <th>Valeur</th>
+                    </tr>
+                </thead>
+                <tbody id="env-config-table">
+                    <tr>
+                        <td>Mode d'environnement</td>
+                        <td><span class="config-value" id="env-mode">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>URL de l'application</td>
+                        <td><span class="config-value" id="app-url">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>URL de l'API</td>
+                        <td><span class="config-value" id="api-url">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>Mode démo</td>
+                        <td><span class="config-value" id="demo-mode">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>Version du Service Worker</td>
+                        <td><span class="config-value" id="sw-version">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>Navigateur</td>
+                        <td><span class="config-value" id="browser-info">-</span></td>
+                    </tr>
+                    <tr>
+                        <td>Date et heure</td>
+                        <td><span class="config-value" id="current-datetime">-</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="status-card">
+            <h2>Journaux du système</h2>
+            <div class="logs-container" id="system-logs">
+                <div class="log-entry">
+                    <span class="timestamp">2025-05-27 22:33:13</span> 
+                    <span class="log-info">[INFO]</span> Initialisation de la page de statut...
+                </div>
+            </div>
+            <div class="actions">
+                <button class="btn" id="refresh-logs-btn">Actualiser les logs</button>
+                <button class="btn btn-secondary" id="copy-logs-btn">Copier les logs</button>
+                <button class="btn btn-danger" id="clear-logs-btn">Effacer les logs</button>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <h2>Outils de diagnostic</h2>
+            <div class="actions">
+                <button class="btn" id="test-connection-btn">Tester la connexion</button>
+                <button class="btn btn-secondary" id="check-resources-btn">Vérifier les ressources</button>
+                <button class="btn btn-secondary" id="redirect-test-btn">Tester les redirections</button>
+                <button class="btn btn-secondary" id="show-api-logs-btn">Journaux API</button>
+                <button class="btn btn-danger" id="reset-app-btn">Réinitialiser l'application</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Elly Energie - Version Diagnostique</p>
+        </div>
+    </footer>
+
+    <script src="status-script.js"></script>
+</body>
+</html>

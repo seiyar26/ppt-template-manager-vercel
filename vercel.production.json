@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "rewrites": [
+    { "source": "/api/image-proxy", "destination": "/api/image-proxy.js" },
+    { "source": "/api/slide-image", "destination": "/api/slide-image.js" },
+    { "source": "/api/(.*)", "destination": "/api/$1.js" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=86400, stale-while-revalidate=3600" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" }
+      ]
+    },
+    {
+      "source": "/api/image-proxy",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
+      ]
+    },
+    {
+      "source": "/api/slide-image",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
+      ]
+    }
+  ]
+}

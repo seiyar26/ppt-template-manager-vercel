@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { TranslationProvider } from './context/TranslationContext';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
+import DiagnosticTools from './components/DiagnosticTools';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import TemplateList from './pages/TemplateList';
@@ -34,6 +35,28 @@ export const ELLY_COLORS = {
 };
 
 function App() {
+  // État pour contrôler l'affichage des outils de diagnostic
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
+  // Vérifier les paramètres d'URL pour activer les diagnostics
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has('diagnostics') || process.env.NODE_ENV === 'development') {
+      setShowDiagnostics(true);
+    }
+    
+    // Écouter la touche spéciale pour activer/désactiver les diagnostics (Ctrl+Shift+D)
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDiagnostics(prevState => !prevState);
+        e.preventDefault();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+  
   return (
     <TranslationProvider>
       <AuthProvider>
@@ -73,6 +96,9 @@ function App() {
                 </div>
               </div>
             </footer>
+            
+            {/* Composant d'outils de diagnostic (visible uniquement quand activé) */}
+            {showDiagnostics && <DiagnosticTools isVisible={true} />}
           </div>
         </Router>
       </AuthProvider>

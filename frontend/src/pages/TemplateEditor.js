@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { templateService, getImageUrl } from '../services/api';
-import { useTranslation } from '../context/TranslationContext';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ELLY_COLORS } from '../App';
+import ImageLoader from '../components/ImageLoader';
+import { useTranslation } from '../context/TranslationContext';
+import { templateService } from '../services/api';
 
 const TemplateEditor = () => {
   const { id } = useParams();
@@ -35,8 +36,8 @@ const TemplateEditor = () => {
   const [showTextPreview, setShowTextPreview] = useState(true);
   const slideRef = useRef(null);
   const fieldRefs = useRef({});
-  const startPositionRef = useRef({x: 0, y: 0});
-  const dragOffsetRef = useRef({x: 0, y: 0});
+  const startPositionRef = useRef({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   // Save field position to server - définition avec useCallback
   const saveFieldPosition = useCallback(async (fieldId, field) => {
@@ -48,7 +49,7 @@ const TemplateEditor = () => {
         height: field.height,
         font_family: field.font_family,
         font_size: field.font_size,
-        font_color: field.font_color, 
+        font_color: field.font_color,
         text_align: field.text_align,
         font_style: field.font_style
       });
@@ -80,7 +81,7 @@ const TemplateEditor = () => {
     { name: 'Quicksand', family: '"Quicksand", sans-serif' },
     { name: 'Work Sans', family: '"Work Sans", sans-serif' }
   ];
-  
+
   // Options d'alignement de texte
   const textAlignOptions = [
     { value: 'left', label: 'Gauche' },
@@ -88,7 +89,7 @@ const TemplateEditor = () => {
     { value: 'right', label: 'Droite' },
     { value: 'justify', label: 'Justifié' }
   ];
-  
+
   // Options de style de police
   const fontStyleOptions = [
     { value: 'normal', label: 'Normal' },
@@ -96,55 +97,68 @@ const TemplateEditor = () => {
     { value: 'bold', label: 'Gras' },
     { value: 'bold italic', label: 'Gras Italique' }
   ];
-  
+
   // Tailles de police
   const fontSizes = Array.from({ length: 30 }, (_, i) => i + 8);
-  
+
   // Fetch template data
   useEffect(() => {
     const fetchTemplate = async () => {
       try {
         console.log('Récupération du modèle:', id);
         setLoading(true);
-        
+
         const data = await templateService.getTemplateById(id);
         console.log('Réponse du modèle:', data);
-        
+
         if (!data || !data.template) {
           console.error('Données de template invalides:', data);
           setError('Données du modèle invalides ou incomplètes');
           return;
         }
-        
+
         // Debug des diapositives reçues
-        console.log('Diapositives reçues:', data.template.Slides);
-        
-        // Sort slides by index
-        const sortedSlides = [...(data.template.Slides || [])].sort(
-          (a, b) => a.slide_index - b.slide_index
+        // Vérifier plusieurs sources possibles pour les diapositives
+        // 1. Dans l'objet principal (format démo)
+        // 2. Dans template.Slides (format API avec majuscule)
+        // 3. Dans template.slides (format API avec minuscule)
+        const slidesFromResponse = data.slides || data.template_slides || [];
+        const slidesFromTemplate = data.template.Slides || data.template.slides || [];
+        const allSlides = slidesFromResponse.length > 0 ? slidesFromResponse : slidesFromTemplate;
+
+        console.log('Diapositives trouvées:', allSlides.length, allSlides);
+
+        // Sort slides by index or slide_order
+        const sortedSlides = [...allSlides].sort(
+          (a, b) => (a.slide_index || a.slide_order || 0) - (b.slide_index || b.slide_order || 0)
         );
-        
+
         console.log('Diapositives triées:', sortedSlides);
-        
+
         if (sortedSlides.length === 0) {
           console.warn('Aucune diapositive trouvée dans le modèle');
         } else {
           console.log('Première diapositive:', sortedSlides[0]);
           console.log('Image path:', sortedSlides[0].image_path);
         }
-        
+
         // Update template with sorted slides
+        // Utiliser la structure attendue par l'interface
         setTemplate({
           ...data.template,
-          Slides: sortedSlides
+          // Assigner les diapositives aux deux emplacements possibles pour assurer la compatibilité
+          Slides: sortedSlides,  // Format avec majuscule (pour certaines parties de l'interface)
+          slides: sortedSlides    // Format avec minuscule (pour d'autres parties de l'interface)
         });
-        
+
+        console.log('Template mis à jour avec diapositives:', sortedSlides.length);
+
         // Set fields - supporté les deux formats (Fields et fields)
         // Pour assurer la compatibilité avec l'API qui peut renvoyer les champs dans l'un ou l'autre format
         const fieldsData = data.template.fields || data.template.Fields || [];
         console.log('Champs reçus du template:', fieldsData);
         setFields(fieldsData);
-        
+
         setError(null);
       } catch (err) {
         console.error('Erreur lors de la récupération du modèle:', err);
@@ -158,7 +172,7 @@ const TemplateEditor = () => {
 
     fetchTemplate();
   }, [id]);
-  
+
   // Debug des variables d'état après chargement
   useEffect(() => {
     if (!loading) {
@@ -174,12 +188,12 @@ const TemplateEditor = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!selectedField) return;
-      
+
       // Only handle arrow keys when in precise mode or with Shift key
       if ((isPreciseMode || e.shiftKey) && selectedField) {
         let deltaX = 0;
         let deltaY = 0;
-        
+
         // Calculate deltas based on key pressed
         switch (e.key) {
           case 'ArrowLeft':
@@ -197,29 +211,29 @@ const TemplateEditor = () => {
           default:
             return; // Do nothing for other keys
         }
-        
+
         e.preventDefault(); // Prevent scrolling
-        
+
         // Update field position
         const updatedField = {
           ...selectedField,
           position_x: selectedField.position_x + deltaX,
           position_y: selectedField.position_y + deltaY
         };
-        
+
         // Update in state
         setSelectedField(updatedField);
-        setFields(fields.map(f => 
+        setFields(fields.map(f =>
           f.id === selectedField.id ? updatedField : f
         ));
-        
+
         // Save to server
         saveFieldPosition(updatedField.id, updatedField);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -234,20 +248,20 @@ const TemplateEditor = () => {
   const handleFieldDragStart = (e, fieldId) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     if (!slideRef.current) return;
-    
+
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
-    
+
     setIsDragging(true);
-    
+
     // Store initial mouse position
     startPositionRef.current = {
       x: e.clientX,
       y: e.clientY
     };
-    
+
     // Store offset from field corner
     const fieldElement = fieldRefs.current[fieldId];
     if (fieldElement) {
@@ -257,7 +271,7 @@ const TemplateEditor = () => {
         y: e.clientY - fieldRect.top
       };
     }
-    
+
     // Add event listeners for dragging
     document.addEventListener('mousemove', handleFieldDragMove);
     document.addEventListener('mouseup', handleFieldDragEnd);
@@ -266,35 +280,35 @@ const TemplateEditor = () => {
   // Handle field drag move
   const handleFieldDragMove = (e) => {
     if (!isDragging || !selectedField || !slideRef.current) return;
-    
+
     // Get slide image dimensions
     const slideRect = slideRef.current.getBoundingClientRect();
-    
+
     // Calculate position relative to slide image
     let x = Math.round(e.clientX - slideRect.left - dragOffsetRef.current.x);
     let y = Math.round(e.clientY - slideRect.top - dragOffsetRef.current.y);
-    
+
     // Constrain to slide boundaries
     x = Math.max(0, Math.min(x, slideRect.width - (selectedField.width || 120)));
     y = Math.max(0, Math.min(y, slideRect.height - (selectedField.height || 40)));
-    
+
     // Snap to grid when not in precise mode
     if (showGrid && !isPreciseMode && !e.shiftKey) {
       const gridSize = 10;
       x = Math.round(x / gridSize) * gridSize;
       y = Math.round(y / gridSize) * gridSize;
     }
-    
+
     // Update field position
     const updatedField = {
       ...selectedField,
       position_x: x,
       position_y: y
     };
-    
+
     // Update in state
     setSelectedField(updatedField);
-    setFields(fields.map(f => 
+    setFields(fields.map(f =>
       f.id === selectedField.id ? updatedField : f
     ));
   };
@@ -305,9 +319,9 @@ const TemplateEditor = () => {
       // Save final position to server
       saveFieldPosition(selectedField.id, selectedField);
     }
-    
+
     setIsDragging(false);
-    
+
     // Remove event listeners
     document.removeEventListener('mousemove', handleFieldDragMove);
     document.removeEventListener('mouseup', handleFieldDragEnd);
@@ -316,16 +330,16 @@ const TemplateEditor = () => {
   // Handle direct position input change
   const handlePositionChange = (e) => {
     if (!selectedField) return;
-    
+
     const { name, value } = e.target;
     const numValue = parseInt(value, 10);
-    
+
     if (!isNaN(numValue)) {
       const updatedField = {
         ...selectedField,
         [name]: numValue
       };
-      
+
       setSelectedField(updatedField);
     }
   };
@@ -333,11 +347,11 @@ const TemplateEditor = () => {
   // Apply position changes after direct input
   const applyPositionChanges = () => {
     if (!selectedField) return;
-    
-    const updatedFields = fields.map(f => 
+
+    const updatedFields = fields.map(f =>
       f.id === selectedField.id ? selectedField : f
     );
-    
+
     setFields(updatedFields);
     saveFieldPosition(selectedField.id, selectedField);
   };
@@ -353,18 +367,18 @@ const TemplateEditor = () => {
   // Add new field
   const handleAddField = async (e) => {
     e.preventDefault();
-    
+
     try {
       const fieldData = {
         ...newField,
         slide_index: currentSlideIndex
       };
-      
+
       const response = await templateService.addField(id, fieldData);
-      
+
       // Add new field to state
       setFields([...fields, response.field]);
-      
+
       // Reset new field form
       setNewField({
         name: '',
@@ -381,7 +395,7 @@ const TemplateEditor = () => {
         text_align: 'left',
         font_style: 'normal'
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Erreur lors de l\'ajout du champ:', err);
@@ -392,17 +406,17 @@ const TemplateEditor = () => {
   // Update selected field
   const handleUpdateField = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedField) return;
-    
+
     try {
       const response = await templateService.updateField(id, selectedField.id, selectedField);
-      
+
       // Update field in state
-      setFields(fields.map(f => 
+      setFields(fields.map(f =>
         f.id === selectedField.id ? response.field : f
       ));
-      
+
       setError(null);
     } catch (err) {
       console.error('Erreur lors de la mise à jour du champ:', err);
@@ -413,20 +427,20 @@ const TemplateEditor = () => {
   // Delete selected field
   const handleDeleteField = async () => {
     if (!selectedField) return;
-    
+
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce champ ?')) {
       return;
     }
-    
+
     try {
       await templateService.deleteField(id, selectedField.id);
-      
+
       // Remove field from state
       setFields(fields.filter(f => f.id !== selectedField.id));
-      
+
       // Clear selected field
       setSelectedField(null);
-      
+
       setError(null);
     } catch (err) {
       console.error('Erreur lors de la suppression du champ:', err);
@@ -465,7 +479,7 @@ const TemplateEditor = () => {
         name: template.name,
         description: template.description
       });
-      
+
       navigate('/templates');
     } catch (err) {
       console.error('Erreur lors de la sauvegarde du modèle:', err);
@@ -518,7 +532,7 @@ const TemplateEditor = () => {
   } else {
     console.warn('Aucune diapositive disponible');
   }
-  
+
   const currentSlideFields = fields.filter(field => field.slide_index === currentSlideIndex);
 
   return (
@@ -573,13 +587,13 @@ const TemplateEditor = () => {
                 </svg>
               </button>
             </div>
-            
+
             <div className="relative">
               {/* Grille d'aide au positionnement */}
               {showGrid && (
                 <div className="absolute inset-0 pointer-events-none z-0">
-                  <div 
-                    className="w-full h-full" 
+                  <div
+                    className="w-full h-full"
                     style={{
                       backgroundSize: '10px 10px',
                       backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), 
@@ -588,30 +602,67 @@ const TemplateEditor = () => {
                   />
                 </div>
               )}
-              
+
               {/* Affichage de l'image avec vérification complète */}
-              {currentSlide && currentSlide.image_path ? (
-                <img
-                  id="slide-image"
-                  src={currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path))}
-                  alt={`${t.slide} ${currentSlideIndex + 1}`}
-                  className="w-full h-auto relative z-10"
-                  ref={slideRef}
-                  onLoad={() => console.log('Image chargée avec succès:', currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path)))}
-                  onError={(e) => {
-                    console.error('Erreur de chargement de l\'image:', e);
-                    console.error('URL de l\'image:', currentSlide.direct_url || (currentSlide.image_path?.startsWith('http') ? currentSlide.image_path : getImageUrl(currentSlide.image_path)));
-                  }}
-                />
+              {currentSlide ? (
+                <div className="w-full h-full relative">
+                  {/* Utilisation du composant ImageLoader avec gestion avancée des chargements et erreurs */}
+                  <ImageLoader
+                    id="slide-image"
+                    className="w-full h-auto relative z-10"
+                    src={
+                      // Si URL directe disponible pour les slides démo, l'utiliser en priorité
+                      currentSlide.direct_url && currentSlide.direct_url.startsWith('http')
+                        ? currentSlide.direct_url
+                        // Sinon utiliser l'API optimisée avec paramètres de qualité
+                        : currentSlide.image_path
+                          ? `/api/slide-image?path=${encodeURIComponent(currentSlide.image_path)}&quality=90`
+                          : template && template.id
+                            ? `/api/slide-image?templateId=${template.id}&slideIndex=${currentSlideIndex + 1}&quality=90`
+                            : null // Géré par les fallbacks
+                    }
+                    // Source de secours 1: URL alternative pour éviter les problèmes avec placeholder
+                    fallbackSrc={
+                      currentSlide.thumbnail ||
+                      (currentSlide.direct_url?.startsWith('http') ? null : currentSlide.direct_url) ||
+                      `https://dummyimage.com/800x450/556677/ffffff&text=Diapositive+${currentSlideIndex + 1}`
+                    }
+                    // Source de secours 2: thumbnail garantie avec un service alternatif
+                    placeholderSrc={
+                      `https://placehold.co/800x450/556677/FFFFFF?text=Diapositive+${currentSlideIndex + 1}`
+                    }
+                    alt={`Diapositive ${currentSlideIndex + 1}`}
+                    onLoad={(e) => {
+                      console.log(`Image chargée avec succès pour la diapositive ${currentSlideIndex + 1}`);
+                      // Log des métriques de performance
+                      if (window.performance && window.performance.getEntriesByName) {
+                        const imgPerf = window.performance.getEntriesByName(e.target.src);
+                        if (imgPerf.length > 0) {
+                          console.log(`Temps de chargement: ${imgPerf[0].duration.toFixed(2)}ms`);
+                        }
+                      }
+                    }}
+                    onError={(e) => {
+                      console.error(`Toutes les tentatives de chargement ont échoué pour la diapositive ${currentSlideIndex + 1}`);
+                    }}
+                  />
+
+                  {/* Contenu HTML par-dessus l'image si disponible */}
+                  {currentSlide.slide_html && (
+                    <div
+                      className="absolute top-0 left-0 w-full h-full z-30 pointer-events-none"
+                      dangerouslySetInnerHTML={{ __html: currentSlide.slide_html }}
+                    />
+                  )}
+
+                  {showGrid && (
+                    <div className="absolute top-0 left-0 w-full h-full grid-overlay z-20" />
+                  )}
+                </div>
               ) : (
-                <div className="w-full h-64 flex flex-col items-center justify-center bg-gray-100 rounded border-2 border-dashed border-gray-300 text-gray-400 p-4">
-                  <div className="text-xl mb-2">{!currentSlide ? 'Aucune diapositive disponible' : 'Image non disponible'}</div>
-                  <div className="text-sm text-red-500">
-                    {!template ? 'Modèle non chargé' :
-                     !template.Slides || template.Slides.length === 0 ? 'Aucune diapositive dans le modèle' :
-                     !currentSlide ? `Problème avec la diapositive ${currentSlideIndex + 1}` :
-                     !currentSlide.image_path ? 'Chemin d\'image non défini pour cette diapositive' :
-                     'Problème de chargement de l\'image'}
+                <div className="flex flex-col items-center justify-center h-64 bg-gray-100 text-gray-500 rounded p-4">
+                  <div className="text-center">
+                    Aucune diapositive sélectionnée
                   </div>
                   <button
                     onClick={() => window.location.reload()}
@@ -621,14 +672,13 @@ const TemplateEditor = () => {
                   </button>
                 </div>
               )}
-              
+
               {/* Overlays des champs */}
               {currentSlideFields.map(field => (
                 <div
                   key={field.id}
-                  className={`absolute border-2 cursor-move p-2 rounded transition-colors duration-200 z-20 ${
-                    selectedField && selectedField.id === field.id ? '' : 'border-gray-400 bg-gray-100 bg-opacity-30'
-                  }`}
+                  className={`absolute border-2 cursor-move p-2 rounded transition-colors duration-200 z-20 ${selectedField && selectedField.id === field.id ? '' : 'border-gray-400 bg-gray-100 bg-opacity-30'
+                    }`}
                   style={{
                     left: `${field.position_x}px`,
                     top: `${field.position_y}px`,
@@ -649,23 +699,23 @@ const TemplateEditor = () => {
                   <div className="text-xs font-medium truncate">
                     {field.label || field.name}
                   </div>
-                  
+
                   {/* Visualisation du point de départ du texte */}
-                  <div 
-                    className="absolute h-4 border-l border-red-500" 
-                    style={{ 
-                      left: '3px', 
-                      top: '50%', 
+                  <div
+                    className="absolute h-4 border-l border-red-500"
+                    style={{
+                      left: '3px',
+                      top: '50%',
                       transform: 'translateY(-50%)',
                       opacity: 0.8
                     }}
                   />
-                  
+
                   {/* Aperçu du texte */}
                   {showTextPreview && (
-                    <div 
+                    <div
                       className="absolute left-0 top-0 right-0 bottom-0 flex items-center overflow-hidden p-2"
-                      style={{ 
+                      style={{
                         fontFamily: field.font_family || 'Arial',
                         fontSize: `${field.font_size || 14}px`,
                         color: field.font_color || '#000000',
@@ -687,36 +737,36 @@ const TemplateEditor = () => {
             <div className="flex justify-between items-center mt-4 bg-gray-50 p-3 rounded">
               <div className="flex items-center space-x-4">
                 <label className="inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={showGrid} 
+                  <input
+                    type="checkbox"
+                    checked={showGrid}
                     onChange={() => setShowGrid(!showGrid)}
-                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out" 
+                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
                   />
                   <span className="ml-2 text-sm text-gray-700">Afficher la grille</span>
                 </label>
-                
+
                 <label className="inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={isPreciseMode} 
+                  <input
+                    type="checkbox"
+                    checked={isPreciseMode}
                     onChange={() => setIsPreciseMode(!isPreciseMode)}
-                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out" 
+                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
                   />
                   <span className="ml-2 text-sm text-gray-700">Mode précis</span>
                 </label>
-                
+
                 <label className="inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={showTextPreview} 
+                  <input
+                    type="checkbox"
+                    checked={showTextPreview}
                     onChange={() => setShowTextPreview(!showTextPreview)}
-                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out" 
+                    className="form-checkbox h-4 w-4 text-blue-600 transition duration-150 ease-in-out"
                   />
                   <span className="ml-2 text-sm text-gray-700">Aperçu du texte</span>
                 </label>
               </div>
-              
+
               <div className="text-xs text-gray-500 italic">
                 {t.positioningNote}
               </div>
@@ -728,7 +778,7 @@ const TemplateEditor = () => {
             <h2 className="text-lg font-medium text-gray-900 mb-4">
               {t.fields} - {t.slide} {currentSlideIndex + 1}
             </h2>
-            
+
             {/* Liste des champs */}
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
@@ -743,11 +793,10 @@ const TemplateEditor = () => {
                   {currentSlideFields.map(field => (
                     <div
                       key={field.id}
-                      className={`p-2 border rounded cursor-pointer transition-colors duration-200 ${
-                        selectedField && selectedField.id === field.id
+                      className={`p-2 border rounded cursor-pointer transition-colors duration-200 ${selectedField && selectedField.id === field.id
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-300 hover:bg-gray-50'
-                      }`}
+                        }`}
                       onClick={() => handleFieldSelect(field)}
                     >
                       <div className="flex justify-between items-center">
@@ -762,7 +811,7 @@ const TemplateEditor = () => {
                 </div>
               )}
             </div>
-            
+
             {/* Éditeur du champ sélectionné */}
             {selectedField && (
               <div className="mb-6">
@@ -777,7 +826,7 @@ const TemplateEditor = () => {
                     Supprimer
                   </button>
                 </div>
-                
+
                 <form onSubmit={handleUpdateField} className="bg-gray-50 p-3 rounded">
                   <div className="space-y-3">
                     <div>
@@ -793,7 +842,7 @@ const TemplateEditor = () => {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fieldLabel}
@@ -807,7 +856,7 @@ const TemplateEditor = () => {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fieldType}
@@ -824,7 +873,7 @@ const TemplateEditor = () => {
                         <option value="image">{t.imageField}</option>
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.defaultValue}
@@ -837,7 +886,7 @@ const TemplateEditor = () => {
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fontFamily}
@@ -853,7 +902,7 @@ const TemplateEditor = () => {
                         ))}
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fontSize}
@@ -869,7 +918,7 @@ const TemplateEditor = () => {
                         ))}
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fontColor}
@@ -882,7 +931,7 @@ const TemplateEditor = () => {
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.textAlign}
@@ -898,7 +947,7 @@ const TemplateEditor = () => {
                         ))}
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         {t.fontStyle}
@@ -914,7 +963,7 @@ const TemplateEditor = () => {
                         ))}
                       </select>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-700">
@@ -931,8 +980,8 @@ const TemplateEditor = () => {
                             required
                           />
                           <div className="flex items-center">
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="border border-l-0 border-gray-300 px-2 py-2 bg-gray-50 text-gray-500 text-xs rounded-r-md"
                               onClick={() => {
                                 const updatedField = {
@@ -940,7 +989,7 @@ const TemplateEditor = () => {
                                   position_x: selectedField.position_x - 1
                                 };
                                 setSelectedField(updatedField);
-                                setFields(fields.map(f => 
+                                setFields(fields.map(f =>
                                   f.id === selectedField.id ? updatedField : f
                                 ));
                                 saveFieldPosition(selectedField.id, updatedField);
@@ -948,8 +997,8 @@ const TemplateEditor = () => {
                             >
                               -
                             </button>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="border border-l-0 border-gray-300 px-2 py-2 bg-gray-50 text-gray-500 text-xs rounded-r-md ml-1"
                               onClick={() => {
                                 const updatedField = {
@@ -957,7 +1006,7 @@ const TemplateEditor = () => {
                                   position_x: selectedField.position_x + 1
                                 };
                                 setSelectedField(updatedField);
-                                setFields(fields.map(f => 
+                                setFields(fields.map(f =>
                                   f.id === selectedField.id ? updatedField : f
                                 ));
                                 saveFieldPosition(selectedField.id, updatedField);
@@ -983,8 +1032,8 @@ const TemplateEditor = () => {
                             required
                           />
                           <div className="flex items-center">
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="border border-l-0 border-gray-300 px-2 py-2 bg-gray-50 text-gray-500 text-xs rounded-r-md"
                               onClick={() => {
                                 const updatedField = {
@@ -992,7 +1041,7 @@ const TemplateEditor = () => {
                                   position_y: selectedField.position_y - 1
                                 };
                                 setSelectedField(updatedField);
-                                setFields(fields.map(f => 
+                                setFields(fields.map(f =>
                                   f.id === selectedField.id ? updatedField : f
                                 ));
                                 saveFieldPosition(selectedField.id, updatedField);
@@ -1000,8 +1049,8 @@ const TemplateEditor = () => {
                             >
                               -
                             </button>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="border border-l-0 border-gray-300 px-2 py-2 bg-gray-50 text-gray-500 text-xs rounded-r-md ml-1"
                               onClick={() => {
                                 const updatedField = {
@@ -1009,7 +1058,7 @@ const TemplateEditor = () => {
                                   position_y: selectedField.position_y + 1
                                 };
                                 setSelectedField(updatedField);
-                                setFields(fields.map(f => 
+                                setFields(fields.map(f =>
                                   f.id === selectedField.id ? updatedField : f
                                 ));
                                 saveFieldPosition(selectedField.id, updatedField);
@@ -1021,7 +1070,7 @@ const TemplateEditor = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-700">
@@ -1052,7 +1101,7 @@ const TemplateEditor = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="pt-2">
                       <button
                         type="submit"
@@ -1066,7 +1115,7 @@ const TemplateEditor = () => {
                 </form>
               </div>
             )}
-            
+
             {/* Formulaire d'ajout de nouveau champ */}
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-2">
@@ -1087,7 +1136,7 @@ const TemplateEditor = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fieldLabel}
@@ -1102,7 +1151,7 @@ const TemplateEditor = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fieldType}
@@ -1119,7 +1168,7 @@ const TemplateEditor = () => {
                     <option value="image">{t.imageField}</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.defaultValue}
@@ -1132,7 +1181,7 @@ const TemplateEditor = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fontFamily}
@@ -1148,7 +1197,7 @@ const TemplateEditor = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fontSize}
@@ -1164,7 +1213,7 @@ const TemplateEditor = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fontColor}
@@ -1177,7 +1226,7 @@ const TemplateEditor = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.textAlign}
@@ -1193,7 +1242,7 @@ const TemplateEditor = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700">
                     {t.fontStyle}
@@ -1209,7 +1258,7 @@ const TemplateEditor = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-medium text-gray-700">
@@ -1238,7 +1287,7 @@ const TemplateEditor = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-medium text-gray-700">
@@ -1267,7 +1316,7 @@ const TemplateEditor = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -1281,7 +1330,7 @@ const TemplateEditor = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Barre d'information sur les raccourcis clavier */}
         <div className="mt-6 p-3 rounded-md shadow-sm" style={{ backgroundColor: ELLY_COLORS.accent }}>
           <h3 className="text-sm font-medium mb-2" style={{ color: ELLY_COLORS.dark }}>Astuces de positionnement</h3>

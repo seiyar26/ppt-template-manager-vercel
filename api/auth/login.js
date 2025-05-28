@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const DEMO_USERS = [
   {
     id: 1,
-    email: 'admin@example.com',
+    email: 'admin@admin.com',
     name: 'Administrateur',
     password: 'admin123', // Ne jamais stocker des mots de passe en clair en production
     role: 'admin'

@@ -34,7 +34,7 @@ async function setupSupabase() {
   try {
     // 1. Vérifier si le bucket existe
     const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
-    
+
     if (listError) {
       console.error('❌ Erreur lors de la vérification des buckets:', listError);
       return false;
@@ -42,20 +42,27 @@ async function setupSupabase() {
 
     // Vérifier si le bucket existe déjà
     const bucketExists = buckets.some(bucket => bucket.name === BUCKET_NAME);
-    
+
     if (!bucketExists) {
       console.log(`⏳ Création du bucket "${BUCKET_NAME}"...`);
-      
+
       // Créer le bucket avec les options recommandées
       const { data, error: createError } = await supabaseAdmin.storage.createBucket(BUCKET_NAME, {
-        public: true  // Accès public aux fichiers uniquement
+        public: true,  // Accès public aux fichiers
+        allowedMimeTypes: [
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'application/vnd.ms-powerpoint',
+          'image/jpeg',
+          'image/png'
+        ],
+        fileSizeLimit: 100 * 1024 * 1024 // 100MB
       });
-      
+
       if (createError) {
         console.error(`❌ Erreur lors de la création du bucket "${BUCKET_NAME}":`, createError);
         return false;
       }
-      
+
       console.log(`✅ Bucket "${BUCKET_NAME}" créé avec succès`);
     } else {
       console.log(`✅ Le bucket "${BUCKET_NAME}" existe déjà`);
@@ -63,10 +70,10 @@ async function setupSupabase() {
 
     // 2. Configuration des politiques RLS
     console.log('🔄 Configuration des politiques RLS...');
-    
+
     // Activer RLS sur storage.objects
     const enableRLS = `ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;`;
-    
+
     // Politique de lecture publique
     const publicReadPolicy = `
       CREATE POLICY IF NOT EXISTS "Public read access to ppt-templates"
@@ -74,7 +81,7 @@ async function setupSupabase() {
       TO public
       USING (bucket_id = '${BUCKET_NAME}');
     `;
-    
+
     // Politique d'upload authentifié
     const authInsertPolicy = `
       CREATE POLICY IF NOT EXISTS "Authenticated upload to ppt-templates"
@@ -87,13 +94,13 @@ async function setupSupabase() {
       // Exécuter les politiques une par une
       await supabaseAdmin.rpc('sql', { query: enableRLS });
       console.log('✅ RLS activé sur storage.objects');
-      
+
       await supabaseAdmin.rpc('sql', { query: publicReadPolicy });
       console.log('✅ Politique de lecture publique créée');
-      
+
       await supabaseAdmin.rpc('sql', { query: authInsertPolicy });
       console.log('✅ Politique d\'upload authentifié créée');
-      
+
     } catch (policyError) {
       console.warn('⚠️ Avertissement politiques RLS:', policyError.message);
       // Les politiques peuvent déjà exister, continuons

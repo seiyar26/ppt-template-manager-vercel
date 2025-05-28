@@ -1,41 +1,56 @@
 import axios from 'axios';
+import { createAxiosInterceptors, ApiLogViewer } from './api-logger';
 
-// Configuration de l'URL de base de l'API pour Vercel
-// Détection automatique de l'environnement
-const getApiUrl = () => {
-  // Force la détection de production Vercel
-  const isVercelProduction = window.location.hostname.includes('vercel.app') || 
-                           process.env.NODE_ENV === 'production' ||
-                           process.env.VERCEL === '1';
+// Configuration de l'environnement de production
+const configureEnvironment = () => {
+  const hostname = window.location.hostname;
+  const isVercelEnvironment = hostname.includes('vercel.app') || hostname.includes('netlify.app');
+  const isLocalDevelopment = hostname === 'localhost' || hostname === '127.0.0.1';
   
-  // En production sur Vercel
-  if (isVercelProduction) {
-    console.log('🚀 Mode production Vercel détecté - Utilisation des API routes /api');
-    return '/api'; // Utilise les API routes Vercel
+  // Toujours en mode production
+  console.log('🔌 Application en mode PRODUCTION - Connexion à un backend réel');
+  
+  return {
+    hostname,
+    isVercelApp: true,
+    nodeEnv: process.env.NODE_ENV,
+    isVercel: isVercelEnvironment || true,
+    reactAppApiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3000/api'
+  };
+};
+
+// Configuration de l'environnement
+const ENV = configureEnvironment();
+
+// Configuration de l'URL de base de l'API - VERSION PRODUCTION
+const getApiBaseUrl = () => {
+  // URL API spécifiée dans les variables d'environnement avec fallback pour production
+  const configuredApiUrl = process.env.REACT_APP_API_URL || '/api';
+  
+  console.log('🔍 Environnement détecté: ', ENV);
+  
+  // Sur Vercel, utiliser le chemin relatif /api
+  if (ENV.isVercel) {
+    console.log('🚀 Mode production Vercel détecté - Utilisation de l\'URL relative: /api');
+    return '/api';
   }
   
-  // En développement local
-  if (process.env.REACT_APP_API_URL) {
-    console.log('🔧 Mode développement - Utilisation de REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
-    return process.env.REACT_APP_API_URL;
+  // Si une URL API est explicitement configurée dans les variables d'environnement, l'utiliser
+  if (configuredApiUrl) {
+    console.log('🚀 URL API configurée: ', configuredApiUrl);
+    return configuredApiUrl;
   }
   
-  // Fallback pour développement local - utilise l'URL relative pour éviter les problèmes de port
-  console.log('🔧 Mode développement fallback - utilisation de l\'URL relative /api');
+  // Fallback: Toujours utiliser l'URL relative API pour assurer une compatibilité maximale
   return '/api';
 };
 
-export const API_URL = getApiUrl();
+export const API_URL = getApiBaseUrl();
 
 // Base URL pour les images - adaptation Vercel optimisée
 const getImageBaseUrl = () => {
-  // En production sur Vercel, on utilise l'origine de la page
-  if (process.env.NODE_ENV === 'production' || window.location.hostname.includes('vercel.app')) {
-    return process.env.REACT_APP_IMAGE_BASE_URL || window.location.origin;
-  }
-  
-  // En développement, on utilise l'URL relative pour éviter les problèmes de port
-  return process.env.REACT_APP_IMAGE_BASE_URL || '';
+  // Force l'utilisation de l'URL du site courant
+  return window.location.origin;
 };
 
 const IMAGE_BASE_URL = getImageBaseUrl();
@@ -44,7 +59,8 @@ console.log('API URL configurée:', API_URL);
 console.log('URL de base des images:', IMAGE_BASE_URL);
 
 // Création d'une instance axios avec la configuration de base pour Vercel
-const apiClient = axios.create({
+// Exportée pour être utilisée directement par certains composants
+export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -54,315 +70,263 @@ const apiClient = axios.create({
   timeout: 30000 // Timeout de 30s pour les serverless functions
 });
 
-// Forcer à nouveau l'URL de base à chaque requête
-apiClient.interceptors.request.use(
-  config => {
-    // Cette ligne force l'URL de base à chaque requête, ignorant tout cache
-    config.baseURL = API_URL;
-    return config;
-  },
-  error => {
-    return Promise.reject(error);
-  }
-);
+// Initialisation du système de journalisation des API
+const apiLoggerManager = createAxiosInterceptors(apiClient);
 
-// Intercepteur pour ajouter le token d'authentification à toutes les requêtes
+// Configuration du logger API en fonction de l'environnement
+if (process.env.NODE_ENV === 'production') {
+  // En production, moins verbeux mais toujours actif pour le débogage
+  apiLoggerManager.configureLogger({
+    logToConsole: false,  // Désactiver les logs console en production
+    logToStorage: true,   // Mais conserver l'historique dans localStorage
+    maxLogEntries: 100    // Augmenter le nombre d'entrées pour production
+  });
+} else {
+  // En développement, journalisation complète
+  apiLoggerManager.configureLogger({
+    logToConsole: true,   // Activer les logs console en développement
+    logToStorage: true,   // Et conserver l'historique dans localStorage
+    maxLogEntries: 50     // Limiter le nombre d'entrées en développement
+  });
+}
+
+// Exportation de l'interface ApiLogViewer pour les composants React
+export { ApiLogViewer };
+
+// Intercepteur pour la gestion des tokens d'authentification
 apiClient.interceptors.request.use(
   config => {
-    // S'assurer que config.headers existe toujours
-    config.headers = config.headers || {};
-    
-    // Gestion spéciale pour les FormData - ne pas définir Content-Type
-    if (config.data instanceof FormData) {
-      console.log('FormData détecté - suppression du Content-Type pour permettre la définition correcte de la boundary');
-      
-      // Supprimer Content-Type pour permettre à axios de définir la boundary correctement
-      delete config.headers['Content-Type'];
-      
-      // S'assurer que headers.common existe avant d'essayer d'accéder à ses propriétés
-      if (config.headers.common) {
-        delete config.headers.common['Content-Type'];
-      }
-    }
-    
-    // Débug des uploads de fichiers
-    if (config.data instanceof FormData) {
-      console.log('Requête FormData détectée:', config.url);
-      console.log('Contenu FormData:');
-      let fileFound = false;
-      let fileSize = 0;
-      let fileName = '';
-      
-      for (let pair of config.data.entries()) {
-        if (pair[0] === 'file') {
-          fileFound = true;
-          fileName = pair[1] ? pair[1].name : 'undefined';
-          fileSize = pair[1] ? pair[1].size : 0;
-          console.log(pair[0] + ':', fileName, fileSize ? 'taille: ' + fileSize + ' octets' : '');
-        } else {
-          console.log(pair[0] + ':', pair[1]);
-        }
-      }
-      
-      // Vérification supplémentaire pour s'assurer que le fichier est bien présent
-      if (!fileFound || !fileSize) {
-        console.error('ATTENTION: Fichier manquant ou de taille nulle dans FormData !');
-      } else {
-        console.log(`Fichier "${fileName}" de ${fileSize} octets prêt à être envoyé`); 
-      }
-    }
-    
     const token = localStorage.getItem('token');
     if (token) {
       console.log('Token trouvé, ajout aux en-têtes:', token.substring(0, 15) + '...');
       config.headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      console.log('Aucun token trouvé dans localStorage');
     }
     return config;
   },
   error => {
-    console.error('Erreur dans l\'intercepteur de requête:', error);
+    console.error('Erreur d\'interception de requête:', error);
     return Promise.reject(error);
   }
 );
 
-// Intercepteur pour gérer les réponses et les erreurs
+// Intercepteur pour gérer les erreurs API de manière centralisée
 apiClient.interceptors.response.use(
   response => {
-    console.log(`Réponse ${response.config.method} ${response.config.url}:`, response.status);
-    return response;
+    console.log(`Réponse ${response.config.method} ${response.config.url.replace(API_URL, '')}: ${response.status}`);
+    // Si response.data existe, le retourner, sinon retourner response directement
+    return response.data !== undefined ? response.data : response;
   },
   error => {
-    if (error.response) {
-      // La requête a été faite et le serveur a répondu avec un code d'état en dehors de la plage 2xx
-      console.error('Erreur de réponse API:', error.response.status, error.response.data);
-      
-      // Si le token a expiré (401 Unauthorized), on déconnecte l'utilisateur
-      if (error.response.status === 401) {
-        console.log('Token expiré ou invalide, déconnexion...');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        // Redirection vers la page de connexion si ce n'est pas déjà le cas
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
-      }
-    } else if (error.request) {
-      // La requête a été faite mais aucune réponse n'a été reçue
-      console.error('Erreur réseau, pas de réponse du serveur:', error.request);
-    } else {
-      // Une erreur s'est produite lors de la configuration de la requête
-      console.error('Erreur lors de la configuration de la requête:', error.message);
+    // Format d'erreur unifié pour l'application
+    let errorResponse = {
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || error.message || 'Erreur inconnue',
+      details: error.response?.data?.details || null
+    };
+    
+    // Log détaillé de l'erreur avec informations contextuelles
+    console.error(`Erreur de réponse API: ${errorResponse.status}`, errorResponse);
+    
+    // En cas d'erreur d'authentification (401), nettoyer le stockage local
+    if (errorResponse.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
-    return Promise.reject(error);
+    
+    return Promise.reject(errorResponse);
   }
 );
+
+// Fonction utilitaire pour générer des URLs d'image correctes
+export const getImageUrl = (imagePath) => {
+  // Si null ou undefined, retourner une image SVG encodée en Data URI
+  if (!imagePath) {
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='800' height='600' fill='%23336699'/%3E%3Ctext x='400' y='300' font-family='Arial' font-size='30' fill='white' text-anchor='middle' dominant-baseline='middle'%3EImage non disponible%3C/text%3E%3C/svg%3E`;
+  }
+  
+  // Si l'URL est déjà absolue, la retourner telle quelle
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // Si l'URL est un Data URI, la retourner telle quelle
+  if (imagePath.startsWith('data:')) {
+    return imagePath;
+  }
+  
+  // Pour les chemins relatifs, construire l'URL complète
+  if (imagePath.startsWith('/')) {
+    return `${window.location.origin}${imagePath}`;
+  }
+  
+  // Pour les chemins de stockage Supabase (format: storage/v1/...)
+  if (imagePath.includes('storage/v1/')) {
+    // Si l'URL contient déjà storage/v1, on vérifie si elle est complète
+    if (imagePath.startsWith('storage/v1/')) {
+      return `${process.env.REACT_APP_SUPABASE_URL}/${imagePath}`;
+    }
+    return imagePath;
+  }
+  
+  // Fallback pour tout autre format de chemin - construire une URL relative à l'API
+  return `${API_URL}/images/${imagePath}`;
+};
 
 // Service pour l'authentification
 const authService = {
   register(userData) {
+    // Mode production uniquement
     return apiClient.post('/auth/register', userData).then(response => {
       return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de l\'inscription:', error);
-      throw error;
     });
   },
   
   login(userData) {
     console.log('Tentative de connexion avec:', { email: userData.email, password: '****' });
     
-    // Afficher des informations de diagnostic sur l'URL utilisée
-    console.log('URL API utilisée pour la connexion:', `${API_URL}/auth/login`);
-    console.log('Environnement détecté:', process.env.NODE_ENV || 'non défini');
-    console.log('Hostname:', window.location.hostname);
-    
-    // Vérifier si les ports 5000 ou 12000 sont utilisés
-    const currentUrl = new URL(window.location.href);
-    if (currentUrl.port === '5000' || currentUrl.port === '12000') {
-      console.warn('ATTENTION: Utilisation du port', currentUrl.port, 'qui peut causer des conflits');
-    }
-    
-    return apiClient.post('/auth/login', userData)
-      .then(response => {
-        console.log('Réponse du serveur lors du login:', response);
-        // Stocker l'utilisateur et le token dans le localStorage pour la persistance
-        if (response.data && response.data.user) {
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
-        if (response.data && response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          console.log('Token stocké dans localStorage:', response.data.token.substring(0, 15) + '...');
-        } else {
-          console.error('Aucun token reçu du serveur');
-        }
-        return response.data;
-      })
-      .catch(error => {
-        console.error('Erreur détaillée lors de la connexion:', error.response?.data || error.message);
-        
-        // Détection et gestion spécifique des erreurs réseau
-        if (error.message === 'Network Error') {
-          console.error('Erreur réseau détectée');
-          console.error('URL API utilisée:', `${API_URL}/auth/login`);
-          console.error('Vérifiez que vous n\'utilisez pas les ports 5000 ou 12000 qui peuvent être bloqués');
-          
-          // Créer une erreur plus descriptive pour l'utilisateur
-          const enhancedError = new Error(
-            'Impossible de se connecter au serveur. Votre connexion est peut-être instable ou un pare-feu bloque les requêtes.'
-          );
-          enhancedError.originalError = error;
-          throw enhancedError;
-        }
-        
-        // Gestion des erreurs 401 (non autorisé)
-        if (error.response && error.response.status === 401) {
-          console.error('Identifiants incorrects');
-          const authError = new Error('Email ou mot de passe incorrect');
-          authError.originalError = error;
-          throw authError;
-        }
-        
-        throw error;
-      });
+    // Mode production uniquement
+    return apiClient.post('/auth/login', userData).then(response => {
+      // Si la réponse contient déjà token et user, c'est la bonne structure
+      // sinon, essayer d'accéder à response.data si disponible
+      if (response.token && response.user) {
+        return response;
+      }
+      return response.data || response;
+    });
   },
   
   logout() {
-    // Supprimer l'utilisateur du localStorage
-    localStorage.removeItem('user');
+    // Mode production uniquement
     localStorage.removeItem('token');
-    return Promise.resolve();
+    localStorage.removeItem('user');
+    
+    return apiClient.post('/auth/logout').then(response => {
+      return response.data;
+    }).catch(err => {
+      console.warn('Erreur de déconnexion API:', err);
+      return { success: true, message: 'Déconnexion locale réussie' };
+    });
   },
   
   getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    console.log('User récupéré depuis localStorage:', user);
-    return Promise.resolve({ user });
+    // Mode production uniquement
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('Aucun token trouvé dans localStorage');
+      return Promise.reject(new Error('Non authentifié'));
+    }
+    
+    console.log('Tentative de récupération de l\'utilisateur avec le endpoint correct');
+    return apiClient.get('/auth/user').then(response => {
+      const user = response.user || response;
+      localStorage.setItem('user', JSON.stringify(user));
+      return { user };
+    });
   }
 };
 
-// Service pour les requêtes de modèles (templates)
+// Service pour les templates
 const templateService = {
   getAllTemplates(categoryId = null) {
-    const params = {};
+    // Mode production uniquement
+    let url = '/templates';
     if (categoryId) {
-      params.categoryId = categoryId;
+      url += `?category=${categoryId}`;
     }
     
-    return apiClient.get('/templates', { params }).then(response => {
-      // Adaptation du format de réponse pour correspondre à ce qu'attend le composant
-      return {
-        templates: response.data?.templates || []
-      };
-    }).catch(error => {
-      console.error('Erreur lors de la récupération des modèles:', error);
-      throw error;
+    return apiClient.get(url).then(response => {
+      console.log('Réponse brute des templates:', response);
+      
+      // Adapter au format de notre API
+      // Vérifier si la réponse a une structure data.status
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        return { templates: response.data };
+      }
+
+      // Vérifier si la réponse est un tableau
+      if (Array.isArray(response)) {
+        return { templates: response };
+      }
+      
+      // Structure de réponse avec templates directement
+      if (response && Array.isArray(response.templates)) {
+        return response;
+      }
+
+      // API directe pourrait retourner { data: [...] } 
+      if (response && response.data && Array.isArray(response.data)) {
+        return { templates: response.data };
+      }
+      
+      // Format de compatibilité par défaut - encapsulation
+      return { templates: response || [] };
     });
   },
   
   getTemplateById(id) {
+    // Pour les IDs au format UUID v4 (format Supabase), utiliser l'API réelle
     return apiClient.get(`/templates/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la récupération du modèle ${id}:`, error);
-      throw error;
+      return response;
     });
   },
   
   createTemplate(templateData) {
-    // Pour les uploads de fichiers, on doit utiliser multipart/form-data et non application/json
-    return apiClient.post('/templates', templateData, {
+    return apiClient.post('/templates', templateData).then(response => {
+      return response;
+    });
+  },
+  
+  uploadTemplate(file, additionalData = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Ajouter les données supplémentaires au FormData
+    Object.keys(additionalData).forEach(key => {
+      formData.append(key, additionalData[key]);
+    });
+    
+    console.log('Début de l\'upload du template avec FormData');
+    
+    // Mode production: Utilisation de l'API Supabase via notre endpoint personnalisé
+    return apiClient.post('/templates/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     }).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de la création du modèle:', error);
-      throw error;
+      console.log('Upload réussi:', response);
+      return response;
     });
   },
   
   updateTemplate(id, templateData) {
+    // Mode production uniquement
     return apiClient.put(`/templates/${id}`, templateData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la mise à jour du modèle ${id}:`, error);
-      throw error;
+      return response;
     });
   },
   
   deleteTemplate(id) {
+    // Mode production uniquement
     return apiClient.delete(`/templates/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la suppression du modèle ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  updateTemplateCategory(templateId, categoryId) {
-    return apiClient.post(`/templates/${templateId}/categories`, { categoryId }).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de l'assignation de la catégorie ${categoryId} au modèle ${templateId}:`, error);
-      throw error;
-    });
-  },
-  
-  removeTemplateFromCategory(templateId, categoryId) {
-    return apiClient.delete(`/templates/${templateId}/categories/${categoryId}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la suppression du modèle ${templateId} de la catégorie ${categoryId}:`, error);
-      throw error;
-    });
-  },
-  
-  // Gestion des champs (fields)
-  addField(templateId, fieldData) {
-    return apiClient.post(`/templates/${templateId}/fields`, fieldData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de l'ajout du champ au modèle ${templateId}:`, error);
-      throw error;
-    });
-  },
-  
-  updateField(templateId, fieldId, fieldData) {
-    return apiClient.put(`/templates/${templateId}/fields/${fieldId}`, fieldData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la mise à jour du champ ${fieldId}:`, error);
-      throw error;
-    });
-  },
-  
-  deleteField(templateId, fieldId) {
-    return apiClient.delete(`/templates/${templateId}/fields/${fieldId}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la suppression du champ ${fieldId}:`, error);
-      throw error;
+      return response;
     });
   },
   
   // Génération de documents
   generateDocument(templateId, values, format = 'pptx', documentName = null) {
-    const data = { values, format };
-    if (documentName) {
-      data.documentName = documentName;
-    }
+    // Mode production uniquement
+    const params = {
+      templateId,
+      values,
+      format,
+      documentName
+    };
     
-    return apiClient.post(`/templates/${templateId}/generate`, data, {
+    return apiClient.post('/templates/generate', params, {
       responseType: 'blob'
     }).then(response => {
       return response;
-    }).catch(error => {
-      console.error(`Erreur lors de la génération du document pour le modèle ${templateId}:`, error);
-      throw error;
     });
   }
 };
@@ -370,113 +334,61 @@ const templateService = {
 // Service pour les catégories
 const categoryService = {
   getAllCategories() {
+    // Mode production uniquement
     return apiClient.get('/categories').then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de la récupération des catégories:', error);
-      throw error;
+      return response;
     });
   },
   
   getCategories() {
+    // Mode production uniquement
     return apiClient.get('/categories').then(response => {
-      // Adaptation du format de réponse pour correspondre à ce qu'attend le composant Categories
-      return {
-        data: {
-          categories: response.data?.categories || []
-        }
-      };
-    }).catch(error => {
-      console.error('Erreur lors de la récupération des catégories:', error);
-      throw error;
+      console.log('Réponse brute des catégories:', response);
+      
+      // Vérifier si la réponse est déjà un tableau (format API direct)
+      if (Array.isArray(response)) {
+        return response;
+      }
+      
+      // Vérifier si la réponse a une propriété data (format classique)
+      if (response && response.data) {
+        return response.data;
+      }
+      
+      // Format de compatibilité pour le code existant
+      return response;
     });
   },
   
   getCategoryById(id) {
+    // Mode production uniquement
     return apiClient.get(`/categories/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la récupération de la catégorie ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  createCategory(categoryData) {
-    return apiClient.post('/categories', categoryData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de la création de la catégorie:', error);
-      throw error;
-    });
-  },
-  
-  updateCategory(id, categoryData) {
-    return apiClient.put(`/categories/${id}`, categoryData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la mise à jour de la catégorie ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  deleteCategory(id) {
-    return apiClient.delete(`/categories/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la suppression de la catégorie ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  addTemplateToCategory(categoryId, templateId) {
-    return apiClient.post(`/categories/${categoryId}/templates/${templateId}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de l'ajout du modèle ${templateId} à la catégorie ${categoryId}:`, error);
-      throw error;
-    });
-  },
-  
-  removeTemplateFromCategory(categoryId, templateId) {
-    return apiClient.delete(`/categories/${categoryId}/templates/${templateId}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors du retrait du modèle ${templateId} de la catégorie ${categoryId}:`, error);
-      throw error;
-    });
-  },
-  
-  reorderCategories(orderData) {
-    return apiClient.put('/categories/reorder', orderData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de la réorganisation des catégories:', error);
-      throw error;
+      return response;
     });
   }
 };
 
-// Service pour les exports
+// Création d'un objet pour l'export par défaut
+const apiServices = {
+  getImageUrl,
+  authService,
+  templateService,
+  categoryService,
+  API_URL,
+  IMAGE_BASE_URL
+};
+
+// Service d'export - version production
 const exportService = {
-  getAllExports(filters = {}) {
-    return apiClient.get('/exports', { params: filters }).then(response => {
-      // Adaptation du format de réponse pour correspondre à ce qu'attend le composant ExportHistory
-      return {
-        exports: response.data?.exports || [],
-        total: response.data?.total || 0
-      };
-    }).catch(error => {
-      console.error('Erreur lors de la récupération des exports:', error);
-      throw error;
+  getExportHistory() {
+    return apiClient.get('/exports').then(response => {
+      return response;
     });
   },
   
-  getExportById(id) {
-    return apiClient.get(`/exports/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la récupération de l'export ${id}:`, error);
-      throw error;
+  deleteExport(id) {
+    return apiClient.delete(`/exports/${id}`).then(response => {
+      return response;
     });
   },
   
@@ -485,152 +397,26 @@ const exportService = {
       responseType: 'blob'
     }).then(response => {
       return response;
-    }).catch(error => {
-      console.error(`Erreur lors du téléchargement de l'export ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  deleteExport(id) {
-    return apiClient.delete(`/exports/${id}`).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de la suppression de l'export ${id}:`, error);
-      throw error;
-    });
-  },
-  
-  sendExportByEmail(id, emailData) {
-    return apiClient.post(`/exports/${id}/send-email`, emailData).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de l'envoi par email de l'export ${id}:`, error);
-      throw error;
     });
   }
 };
 
-// Service pour les emails
+// Service d'email - version production
 const emailService = {
-  getEmailTemplates() {
-    return apiClient.get('/email/templates').then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error('Erreur lors de la récupération des templates d\'email:', error);
-      throw error;
-    });
-  },
-  
-  sendEmail(exportId, emailData) {
-    // Utiliser FormData pour permettre l'envoi de fichiers
-    const formData = new FormData();
-    
-    // Ajouter les champs de base
-    formData.append('to', emailData.to);
-    formData.append('subject', emailData.subject);
-    formData.append('message', emailData.message);
-    
-    // Ajouter les champs CC s'ils existent
-    if (emailData.cc) {
-      formData.append('cc', emailData.cc);
-    }
-    
-    // Ajouter les informations de template si utilisées
-    if (emailData.useTemplate) {
-      formData.append('useTemplate', 'true');
-      formData.append('templateId', emailData.templateId);
-      formData.append('templatePath', emailData.templatePath);
-    }
-    
-    // Ajouter les pièces jointes s'il y en a
-    if (emailData.attachments && emailData.attachments.length > 0) {
-      emailData.attachments.forEach(file => {
-        formData.append('attachments', file);
-      });
-    }
-    
-    return apiClient.post(`/email/exports/${exportId}/send`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    }).then(response => {
-      return response.data;
-    }).catch(error => {
-      console.error(`Erreur lors de l'envoi de l'email pour l'export ${exportId}:`, error);
-      throw error;
+  sendEmail(data) {
+    return apiClient.post('/email/send', data).then(response => {
+      return response;
     });
   }
-};
-
-// Fonction utilitaire pour construire des URLs d'images
-const getImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  
-  // Déboguer le format du chemin d'image
-  console.log('Construction URL d\'image à partir de:', imagePath);
-  
-  // Si l'URL est déjà absolue (commence par http:// ou https://), la retourner telle quelle
-  // mais en s'assurant qu'elle est correctement formatée avec new URL()
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    try {
-      // Utiliser l'API URL pour normaliser l'URL et éviter les problèmes de double URL
-      const normalizedUrl = new URL(imagePath).toString();
-      console.log('URL absolue normalisée:', normalizedUrl);
-      return normalizedUrl;
-    } catch (error) {
-      console.error('Erreur lors de la normalisation de l\'URL:', error);
-      // Fallback au cas où l'URL serait invalide
-      return imagePath;
-    }
-  }
-  
-  // Si le chemin est un chemin absolu complet (à partir de /Users/...)
-  if (imagePath.includes('/Users/')) {
-    // Extraire seulement la partie après /uploads/
-    const uploadsIndex = imagePath.indexOf('/uploads/');
-    if (uploadsIndex !== -1) {
-      const relativePath = imagePath.substring(uploadsIndex);
-      console.log('Chemin relatif extrait:', relativePath);
-      return `${IMAGE_BASE_URL}${relativePath}`;
-    }
-  }
-  
-  // Si le chemin contient déjà /api/ au début, ne pas ajouter le préfixe
-  if (imagePath.startsWith('/api/')) {
-    const baseUrl = IMAGE_BASE_URL.split('/api')[0];
-    console.log('URL d\'API avec base:', `${baseUrl}${imagePath}`);
-    return `${baseUrl}${imagePath}`;
-  }
-  
-  // Vérifier si le chemin commence par / pour éviter les doubles slashes
-  const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-  
-  // Si le chemin contient déjà une URL complète à l'intérieur, l'extraire
-  if (path.includes('https://') || path.includes('http://')) {
-    const urlMatch = path.match(/(https?:\/\/[^\s]+)/);
-    if (urlMatch && urlMatch[1]) {
-      try {
-        const extractedUrl = new URL(urlMatch[1]).toString();
-        console.log('URL extraite du chemin:', extractedUrl);
-        return extractedUrl;
-      } catch (error) {
-        console.error('Erreur lors de l\'extraction de l\'URL:', error);
-      }
-    }
-  }
-  
-  const finalUrl = `${IMAGE_BASE_URL}${path}`;
-  console.log('URL d\'image finalisée:', finalUrl);
-  return finalUrl;
 };
 
 export {
-  apiClient,
   authService,
   templateService,
   categoryService,
   exportService,
   emailService,
-  getImageUrl,
   IMAGE_BASE_URL
 };
+
+export default apiServices;

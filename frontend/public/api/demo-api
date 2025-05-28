@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "message": "Réponse API de démonstration",
+  "data": {
+    "templates": [],
+    "slides": [],
+    "categories": []
+  }
+}

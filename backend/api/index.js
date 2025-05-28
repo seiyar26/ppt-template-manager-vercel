@@ -66,4 +66,22 @@ app.use((err, req, res, next) => {
 });
 
 // Export pour Vercel Serverless Functions
+// Cette partie est critique pour que Vercel exécute correctement l'API
 module.exports = app;
+
+// Pour le mode développement local
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 12000;
+  
+  // Synchroniser la base de données et démarrer le serveur
+  sequelize.sync()
+    .then(() => {
+      console.log('Base de données connectée avec succès.');
+      app.listen(PORT, () => {
+        console.log(`Serveur démarré sur le port ${PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('Erreur lors de la connexion à la base de données:', err);
+    });
+}
